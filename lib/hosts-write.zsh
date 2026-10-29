@@ -36,8 +36,10 @@ hosts_write_atomic() {
 }
 
 # Siendo root, el archivo nuevo es de root:wheel, como el /etc/hosts original.
+# El "--" va antes del dueño: el chown de macOS deja de leer opciones en el
+# primer argumento normal, y un "--" detrás lo tomaría por un archivo.
 set_root_owner() {
-  if (( IS_ROOT )); then chown root:wheel -- $1; fi
+  if (( IS_ROOT )); then chown -- root:wheel $1; fi
 }
 
 # Vacía la caché DNS de macOS para que el cambio se note enseguida. Solo siendo

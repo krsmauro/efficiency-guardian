@@ -22,6 +22,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 
 - **Regla del usuario (2026-10-29): no escribir más código hasta que el usuario haga las pruebas manuales** (1.5, 1.6, 4.4, 3.1 y 5.6). Si un agente encuentra un fallo antes, **lo documenta** (en la especificación de su fase y en la bitácora) para que otro agente lo arregle después, cuando el usuario lo pida. No lo arregla.
 - **Fases 1 y 4: código terminado** (pasos 1.1 a 1.4 y 4.0 a 4.3). El instalador instala las dos juntas. Faltan los pasos del usuario: 1.5 (instalar), 1.6 y 4.4 (verificación manual).
+- **1.5 en curso (2026-10-29):** el primer intento se detuvo en el paso 6 por un fallo de `chown` (ver la bitácora, sesión 6). Arreglado con el permiso del usuario; falta volver a ejecutar `sudo ./install.sh`. Mientras tanto: archivos copiados, sin LaunchDaemon ni regla de sudoers, `/etc/hosts` intacto.
 - **Fase 5: código terminado** (5.1 a 5.4): la app de barra de menús en `app/`. Compila y sus pruebas pasan, pero **nunca ha hablado con el motor instalado**. Una revisión encontró 6 fallos, arreglados pero dos de ellos **sin probar** ([lista](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-revisión-2026-10-29-arreglados-sin-probar-a-mano)). Faltan 5.5 (decidir si absorbe la Fase 3) y la verificación del usuario (5.6).
 - **Fase 3: script escrito y probado sin navegadores** (3.2 y la mitad de 3.3). **No lo instala todavía el instalador:** quién lo ejecuta cada 15 s depende de la prueba de permisos 3.1.
 - **Siguientes pasos: el usuario.** Ya no queda trabajo del agente que no dependa de ellos:
@@ -30,7 +31,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
   - La prueba de permisos de la Fase 3 (3.1), sin sudo y en cualquier momento: `zsh tools/try-close-tabs.zsh terminal` y luego `agent` ([instrucciones](docs/fases/fase-3-cerrar-pestanas.md#cómo-hacer-la-prueba-toolstry-close-tabszsh-sin-sudo)). Anotar a nombre de quién pide macOS el permiso.
 - **Después, el agente (solo cuando el usuario lo pida, tras sus pruebas):** con el resultado de 3.1, decidir 5.5 (¿cierra las pestañas la app o un LaunchAgent?) y escribir el disparador de la Fase 3. Con los resultados de 1.6, 4.4 y 5.6, corregir lo que falle. O guiar la Fase 2 (manual).
 - **Código escrito:** motor `bin/guardian` + 20 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, `close-tabs/` (Fase 3, 4 archivos), `tools/try-close-tabs.zsh`, y la app en `app/` (Fase 5: 24 archivos de Swift, `Package.swift` y `build.zsh`).
-- **Pruebas:** 607 comprobaciones en `tests/` (`zsh tests/run.zsh`) y 59 de la app (`swift test --package-path app`). Todas pasan. **Nada instalado todavía:** `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
+- **Pruebas:** 612 comprobaciones en `tests/` (`zsh tests/run.zsh`) y 59 de la app (`swift test --package-path app`). Todas pasan. **Instalación a medias** (ver 1.5 arriba): `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
 - **Última actualización:** 2026-10-29.
 
 ## Cómo usar este plan (agentes)
@@ -277,3 +278,11 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
 - **Lo que la revisión no pudo verificar** (añadido a 5.6): cómo se dibuja el ícono, si el menú se actualiza abierto, si la alerta sale delante, App Nap, notificaciones e ítem de inicio con firma local.
 - **Error del agente:** el usuario preguntó si ya solo quedaba la evaluación humana, y el agente siguió arreglando los fallos de la revisión. De ahí la regla de arriba.
 - **Siguiente:** el usuario instala y verifica (1.5, 1.6, 4.4), luego la app (5.6). La prueba 3.1, cuando quiera.
+
+### 2026-10-29 · Sesión 6: el usuario instala (1.5), primer intento
+- **El usuario tomó el control:** pidió que el agente le guíe paso a paso. Antes de instalar se comprobó: pruebas en verde, `/usr/local` de root (Homebrew está en `/opt/homebrew`), sin carpetas compartidas previas.
+- **Fallo encontrado al instalar:** el paso 6 (quitar las 4 líneas manuales) se detuvo con `chown: --: No such file or directory`. El `chown` de macOS deja de leer opciones en el primer argumento normal, así que en `chown root:wheel -- archivo` toma el `--` por un archivo. Rompía **toda** escritura de hosts siendo root, no solo el instalador.
+- **Por qué no lo vieron las pruebas:** corren sin root y esa línea solo se ejecuta como root; el ensayo de la sesión 2 simulaba `chown`. Las otras dos ramas solo de root (`dns_flush` y `log_event`) solo avisan si fallan: no pueden detener nada.
+- **Arreglado con el permiso del usuario** (excepción a la regla de no escribir código, porque bloqueaba su prueba): `chown -- root:wheel` y `tests/test-hosts-write.zsh`, que finge root y ejecuta el `chown` real. Con la línea antigua, la prueba falla con el mismo mensaje. Detalle en la [especificación](docs/fases/fase-1-motor.md#instalador-installsh-lo-ejecuta-el-usuario-sudo-installsh).
+- **Estado tras el intento:** archivos copiados y verificados (pasos 4 y 5); sin LaunchDaemon ni regla de sudoers; `/etc/hosts` intacto; una copia `hosts.before-install.20261029-114509` en `/var/db/efficiency-guardian/`.
+- **Siguiente:** el usuario vuelve a ejecutar `sudo ./install.sh`.
