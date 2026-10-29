@@ -21,12 +21,12 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 ## Estado actual
 
 - **Regla del usuario (2026-10-29): no escribir más código hasta que el usuario haga las pruebas manuales** (1.5, 1.6, 4.4, 3.1 y 5.6). Si un agente encuentra un fallo antes, **lo documenta** (en la especificación de su fase y en la bitácora) para que otro agente lo arregle después, cuando el usuario lo pida. No lo arregla.
-- **Fases 1 y 4: instaladas el 2026-10-29** (1.5 hecho, al segundo intento: ver la bitácora, sesión 6). Verificación manual (1.6 y 4.4) **en curso**: lo hecho está marcado en cada checklist. Bloqueo, regla de sudoers, pase, retraso al terminar y LaunchDaemon funcionan en el sistema real.
+- **Fases 1 y 4: instaladas el 2026-10-29** (1.5 hecho, al segundo intento: ver la bitácora, sesión 6). Verificación manual (1.6 y 4.4) **cerrada por el usuario el mismo día, en parte**: no quiere seguir con checklists; lo que falte lo descubrirá usándolo y lo reportará. Funcionan en el sistema real: bloqueo de los 10 grupos en los 5 navegadores, regla de sudoers, pase, retraso al terminar y LaunchDaemon. **Sin probar** (casillas sin marcar en cada checklist): sesión por tiempo (`start 25`), reposo, reposo de una noche, arranque automático tras reiniciar, candado, vista previa de Studio. **Fallo conocido sin arreglar:** la pista de `stop` ([Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#fallos-encontrados-en-la-verificación-manual-sin-arreglar)).
 - **Fase 5: código terminado** (5.1 a 5.4): la app de barra de menús en `app/`. Compila y sus pruebas pasan, pero **nunca ha hablado con el motor instalado**. Una revisión encontró 6 fallos, arreglados pero dos de ellos **sin probar** ([lista](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-revisión-2026-10-29-arreglados-sin-probar-a-mano)). Faltan 5.5 (decidir si absorbe la Fase 3) y la verificación del usuario (5.6).
 - **Fase 3: script escrito y probado sin navegadores** (3.2 y la mitad de 3.3). **No lo instala todavía el instalador:** quién lo ejecuta cada 15 s depende de la prueba de permisos 3.1.
 - **Siguientes pasos: el usuario.** Ya no queda trabajo del agente que no dependa de ellos:
-  - **El más importante:** terminar la verificación manual de la [Fase 1](docs/fases/fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario) (1.6) y la de la [Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#verificación-manual-tras-instalar-44-la-hace-el-usuario) (4.4). Las casillas sin marcar son lo que falta.
-  - **Con el motor instalado:** compilar e instalar la app (`zsh app/build.zsh` y copiarla a `/Applications`, sin sudo; [instrucciones](docs/fases/fase-5-app-barra-de-menus.md#compilar-e-instalar-lo-hace-el-usuario-sin-sudo)) y hacer su [verificación](docs/fases/fase-5-app-barra-de-menus.md#verificación-manual-56-la-hace-el-usuario-con-el-motor-instalado) (5.6).
+  - **Usar el motor a diario** y reportar lo que falle. Si reporta un fallo, el agente lo arregla (con una prueba que lo reproduzca) y lo anota en la especificación de su fase.
+  - **Cuando quiera:** compilar e instalar la app (`zsh app/build.zsh` y copiarla a `/Applications`, sin sudo; [instrucciones](docs/fases/fase-5-app-barra-de-menus.md#compilar-e-instalar-lo-hace-el-usuario-sin-sudo)) y hacer su [verificación](docs/fases/fase-5-app-barra-de-menus.md#verificación-manual-56-la-hace-el-usuario-con-el-motor-instalado) (5.6).
   - La prueba de permisos de la Fase 3 (3.1), sin sudo y en cualquier momento: `zsh tools/try-close-tabs.zsh terminal` y luego `agent` ([instrucciones](docs/fases/fase-3-cerrar-pestanas.md#cómo-hacer-la-prueba-toolstry-close-tabszsh-sin-sudo)). Anotar a nombre de quién pide macOS el permiso.
 - **Después, el agente (solo cuando el usuario lo pida, tras sus pruebas):** con el resultado de 3.1, decidir 5.5 (¿cierra las pestañas la app o un LaunchAgent?) y escribir el disparador de la Fase 3. Con los resultados de 1.6, 4.4 y 5.6, corregir lo que falle. O guiar la Fase 2 (manual).
 - **Código escrito:** motor `bin/guardian` + 20 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, `close-tabs/` (Fase 3, 4 archivos), `tools/try-close-tabs.zsh`, y la app en `app/` (Fase 5: 24 archivos de Swift, `Package.swift` y `build.zsh`).
@@ -97,7 +97,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 - [x] 1.3 Escribir `bin/guardian` y los módulos de `lib/` hasta que pasen las pruebas.
 - [x] 1.4 Escribir `install.sh` (con sus pasos en `install/`) y `uninstall.sh`.
 - [x] 1.5 **Usuario:** revisar los scripts y ejecutar `sudo ./install.sh`. (2026-10-29, al segundo intento.)
-- [ ] 1.6 **Usuario:** verificación manual (checklist en la especificación, incluidos YouTube Studio, WhatsApp Web y Pinterest).
+- [x] 1.6 **Usuario:** verificación manual (checklist en la especificación, incluidos YouTube Studio, WhatsApp Web y Pinterest). **En parte:** cerrada por el usuario el 2026-10-29.
 
 ### Fase 2: el interruptor
 - [ ] 2.1–2.5 Configurar la Concentración, los atajos y las automatizaciones (manual, guiado).
@@ -114,7 +114,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 - [x] 4.1 Configuración (`config.default`, lectura validada) y archivo de estado.
 - [x] 4.2 `start <min>`, `stop` con retraso, `cancel-stop`, `pass`, `status --json` y `reconcile`, con pruebas (reloj y arranque falsos).
 - [x] 4.3 LaunchDaemon `reconcile` cada 30 s + regla de sudoers generada desde la configuración.
-- [ ] 4.4 **Usuario:** verificación manual: reinicio, reposo, pase, retraso, candado (checklist en la especificación).
+- [x] 4.4 **Usuario:** verificación manual: reinicio, reposo, pase, retraso, candado (checklist en la especificación). **En parte:** pase y retraso probados; reinicio, reposo y candado quedan para el uso diario (cerrada por el usuario el 2026-10-29).
 - [ ] 4.5 Tras 1–2 semanas de uso, revisar los registros y ajustar los valores por defecto.
 
 ### Fase 5: app de barra de menús (v1)
@@ -287,10 +287,12 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
 - **Segundo intento: instalado** (11:52). Las 4 líneas manuales se quitaron, con copia.
 - **Verificación manual, primera tanda** (detalle marcado en los checklists de las Fases 1 y 4):
   - Regla de sudoers: `start` sin contraseña; `status` y `rm` rechazados. **Trampa:** sudo recuerda la contraseña 5 min, así que tras instalar hay que hacer `sudo -k` antes de probarla. Anotado en la Fase 1.
-  - YouTube no carga en los cinco navegadores; LinkedIn sí, salvo en Thorium ("403 Forbidden", del servidor de LinkedIn: no es el bloqueo; Thorium es un Chromium de mediados de 2025).
+  - YouTube no carga en los cinco navegadores; LinkedIn sí, salvo en Thorium (un "403 Forbidden" puntual del servidor de LinkedIn; después cargó con y sin bloqueo).
   - **YouTube Studio:** con la sesión iniciada funciona; **iniciar sesión** falla, porque la redirección pasa por `www.youtube.com/signin`. Hosts no puede desbloquear una sola página. Se acepta: se usa un pase (el usuario lo considera un caso raro).
   - Pase: desbloqueó solo YouTube (71 de 82 dominios bloqueados) y `reconcile` volvió a bloquear 14 s después de vencer. LaunchDaemon: 57 ejecuciones en 28 min, todas con salida 0.
   - Retraso al terminar: `stop` a las 12:36:26, fin a las 12:41:39. `/etc/hosts` quedó del mismo tamaño que antes de `start`, sin bloque.
 - **Fallo nuevo, sin arreglar:** la pista de `stop` ("guardian cancel-stop") no funciona tal cual: `/usr/local/sbin` no está en el PATH y falta `sudo -n`. Anotado en la [especificación de la Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#fallos-encontrados-en-la-verificación-manual-sin-arreglar).
 - **Error del agente:** ejecutó `sudo -n true` (no hace nada) contra la regla de que solo el usuario ejecuta sudo. Se le avisó al usuario.
-- **Siguiente:** seguir con las casillas sin marcar de 1.6 y 4.4.
+- **Más resultados:** Gmail, Drive y Meet funcionan con el bloqueo. Los 82 dominios resuelven al bloqueo (`dscacheutil`). Pinterest redirige a `co.pinterest.com`, que ya está en la lista. LinkedIn en Thorium cargó con y sin bloqueo.
+- **Decisión del usuario:** no seguir con los checklists. Lo que falta se descubrirá con el uso; él reportará los fallos. Quedan sin probar: sesión por tiempo, reposo, arranque automático, candado y la vista previa de Studio.
+- **Siguiente:** usarlo. Cuando quiera: instalar la app (5.6), la prueba de permisos (3.1) o la Fase 2 (manual).

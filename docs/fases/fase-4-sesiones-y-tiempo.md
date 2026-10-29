@@ -224,6 +224,8 @@ Los casos mínimos de la especificación original están todos cubiertos.
 
 Además de la [verificación de la Fase 1](fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario):
 
+> **2026-10-29: el usuario cerró esta verificación en parte.** Las casillas sin marcar no se probaron: se descubrirán con el uso diario.
+
 - [x] `sudo launchctl print system/com.efficiency-guardian.reconcile` muestra el trabajo cargado, con `run interval = 30 seconds`. (2026-10-29: funciona sin sudo; 57 ejecuciones en 28 min, todas con salida 0.)
 - [ ] `sudo -n /usr/local/sbin/guardian start 25` funciona sin contraseña, y `sudo -n /usr/local/sbin/guardian start 37` la pide o falla.
 - [x] **Retraso:** `sudo -n guardian stop` → `guardian status` dice "Terminación pendiente". A los 5 min (más hasta 30 s), YouTube vuelve a cargar sin hacer nada más. (2026-10-29: `stop` a las 12:36:26, fin a las 12:41:39.)

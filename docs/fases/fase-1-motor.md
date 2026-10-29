@@ -188,19 +188,21 @@ Se puede volver a ejecutar para actualizar lo instalado (por ejemplo, tras cambi
 >
 > Si prefieres comprobar la Fase 1 sola, instálala desde su commit (`29b7ee0`) antes de actualizar; la Fase 4 conserva el bloqueo que haya al actualizar. La verificación de la Fase 4 está en [su especificación](fase-4-sesiones-y-tiempo.md#verificación-manual-tras-instalar-44-la-hace-el-usuario).
 
-> **Resultados del 2026-10-29 (primera instalación):** marcados abajo. **Ojo al repetir la prueba de la contraseña:** sudo recuerda la contraseña 5 min, así que justo después de `sudo ./install.sh` la regla parece funcionar aunque no exista. Ejecutar antes `sudo -k`.
+> **Resultados del 2026-10-29 (primera instalación):** marcados abajo. El usuario cerró la verificación ese día; las casillas sin marcar no se probaron y se descubrirán con el uso. **Ojo al repetir la prueba de la contraseña:** sudo recuerda la contraseña 5 min, así que justo después de `sudo ./install.sh` la regla parece funcionar aunque no exista. Ejecutar antes `sudo -k`.
 
 - [x] `sudo -n /usr/local/sbin/guardian start` funciona **sin pedir contraseña** (tras `sudo -k`).
 - [x] `sudo -n /usr/local/sbin/guardian status` **sí pide contraseña o falla**, porque no está en la regla. Correcto: `status` se usa sin sudo. ("a password is required")
 - [x] `sudo -n /usr/local/sbin/guardian rm` es rechazado.
 - [x] `dscacheutil -q host -a name www.youtube.com` solo muestra `0.0.0.0` y `::`. (También youtube.com, web.whatsapp.com e www.instagram.com.)
 - [x] Una pestaña nueva con youtube.com **no carga** en Brave, Vivaldi, Chrome y Thorium. Safari: probarlo también, y anotar si iCloud Private Relay está activo. (2026-10-29: no carga en ninguno de los cinco. Brave da `ERR_CONNECTION_REFUSED`. Falta saber si Private Relay estaba activo en Safari.)
-  - **LinkedIn en Thorium da "403 Forbidden"** (en los otros cuatro carga). No es el bloqueo: LinkedIn no está en ninguna lista, y un 403 es una respuesta del servidor de LinkedIn, o sea que la conexión llegó. Sospecha: LinkedIn rechaza Thorium 138.0.7204.303 (Chromium de mediados de 2025, muy desactualizado). Se confirma si sigue igual sin sesión.
+  - **LinkedIn en Thorium da "403 Forbidden"** (en los otros cuatro carga). No es el bloqueo: LinkedIn no está en ninguna lista, y un 403 es una respuesta del servidor de LinkedIn, o sea que la conexión llegó. Después cargó en Thorium sin sesión y otra vez con el bloqueo activo (mismo día): **fue algo puntual de LinkedIn**, no el bloqueo. (Aparte: Thorium es 138.0.7204.303, un Chromium de mediados de 2025, muy desactualizado.)
 - [ ] Siguen funcionando: LinkedIn, Gmail, Drive, Meet, **YouTube Studio** (subir un video de prueba como privado, y ver la vista previa), y el inicio de sesión de Google en una ventana privada.
   - YouTube Studio con la sesión ya iniciada: **funciona** (Brave).
   - **Iniciar sesión en YouTube Studio sin sesión** (ventana privada de Brave): **falla.** Tras el inicio de sesión de Google, la redirección pasa por `www.youtube.com/signin?...&next=https://studio.youtube.com/`, que está bloqueado. Hosts no puede desbloquear una sola página, así que no hay arreglo barato. Solución: un pase. Comprobado en parte el 2026-10-29: con el pase, `www.youtube.com` carga; el inicio de sesión en Studio no se probó expresamente. Limitación aceptada como rara (solo cuando Google cierra la sesión).
-  - LinkedIn, Gmail, Meet y `accounts.google.com` resuelven con normalidad (`dscacheutil`); falta abrirlos en el navegador.
-- [ ] No cargan: cada grupo de `blocklists/`, incluido WhatsApp Web. Para Pinterest, anotar a qué subdominio de país redirige.
+  - LinkedIn, Gmail, Drive y Meet: **funcionan** en el navegador con el bloqueo activo (2026-10-29).
+  - Inicio de sesión de Google en una ventana privada: **sin probar** (el usuario no lo mencionó). Riesgo bajo: `accounts.youtube.com` no está bloqueado, y si fallara se usa un pase.
+  - Falta: subir un video de prueba en Studio y ver la vista previa.
+- [x] No cargan: cada grupo de `blocklists/`, incluido WhatsApp Web. Para Pinterest, anotar a qué subdominio de país redirige. (2026-10-29: los 82 dominios de los 10 grupos resuelven solo a `0.0.0.0` y `::`, comprobado con `dscacheutil`; WhatsApp Web no carga en Brave. Pinterest redirige a `co.pinterest.com`, que ya está en la lista.)
 - [x] `sudo -n /usr/local/sbin/guardian stop` y YouTube vuelve a cargar (quizá haga falta recargar). (2026-10-29: tras el retraso de 5 min, sin hacer nada.)
 - [ ] `/etc/hosts` queda idéntico a como estaba antes de `start`. (2026-10-29: mismo tamaño que `hosts.original`, 213 bytes, y sin bloque. Falta `sudo diff /var/db/efficiency-guardian/hosts.original /etc/hosts` para confirmarlo.)
 - [x] El registro muestra el `start` y el `stop`: `/usr/bin/log show --last 1h --style compact --predicate 'process == "logger" AND eventMessage BEGINSWITH "efficiency-guardian"'`.
