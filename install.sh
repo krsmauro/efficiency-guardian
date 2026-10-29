@@ -14,7 +14,7 @@
 #   5. Verificar que nadie más que root puede modificar lo instalado. verify.zsh
 #   6. Ofrecer quitar las líneas manuales antiguas de /etc/hosts.     migrate-hosts.zsh
 #   7. Cargar el LaunchDaemon (reconcile cada 30 s).                  launchdaemon.zsh
-#   8. Instalar la regla de sudoers, generada desde la configuración. sudoers.zsh
+#   8. Instalar la regla de sudoers (no depende de la configuración). sudoers.zsh
 #   9. Mostrar los siguientes pasos.
 #
 # El paso 5 va antes que el 7 y el 8 a propósito: la regla de sudoers y el
@@ -23,7 +23,7 @@
 # Instalar no activa ni quita el bloqueo: si estaba activo, sigue activo. Con
 # AUTOSTART_AT_BOOT=yes, la sesión automática empieza en el siguiente arranque.
 # Se puede volver a ejecutar para actualizar lo instalado (por ejemplo, tras
-# cambiar las listas o TIMED_PRESETS).
+# cambiar las listas o con una versión nueva del motor).
 
 emulate -R zsh
 setopt ERR_EXIT NO_UNSET PIPE_FAIL

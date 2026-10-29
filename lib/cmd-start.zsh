@@ -5,15 +5,13 @@
 #                Repetirlo no cambia nada (Atajos a veces envía dos eventos).
 #   start <min>  <min> debe estar en TIMED_PRESETS. Sin sesión: una sesión por
 #                tiempo. Con una sin fin: la convierte (S2). Con otra por
-#                tiempo: error (no se puede acortar ni alargar).
+#                tiempo: error (para eso están extend y shorten).
 # En todos los casos hosts se pone al día (por ejemplo, si cambiaron las listas).
 
 cmd_start() {
   local minutes=${1:-} message
   engine_begin
-  if [[ -n $minutes ]] && (( ! ${CFG_PRESETS[(Ie)$minutes]} )); then
-    die "$minutes min no es una duración permitida (TIMED_PRESETS: ${(j:, :)CFG_PRESETS})"
-  fi
+  if [[ -n $minutes ]]; then config_require_preset $minutes; fi
 
   case $S[SESSION]:${minutes:+timed} in
     none:)

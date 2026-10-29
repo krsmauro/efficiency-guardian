@@ -38,14 +38,14 @@ El repositorio trae [config.default](../../config.default), con un comentario po
 | `AUTOSTART_AT_BOOT` | `yes` | `yes` / `no` |
 | `PASS_MINUTES` | `5` | 1 a 60 |
 | `PASS_MAX_PER_SESSION` | `3` | 0 a 20 (0 = sin pases) |
-| `PASS_GROUPS` | `youtube` | Grupos de `blocklists/`, en minúsculas, separados por comas |
+| `PASS_GROUPS` | `youtube` | Grupos de `blocklists/` que admiten pase, en minúsculas, separados por comas. **(Fase 6)** Cada pase desbloquea uno; sin elegir, el primero |
 
 - **Se lee línea por línea, nunca con `source`** (ejecutaría su contenido como root). Formato estricto: `CLAVE=valor`, el valor solo admite letras, números, comas y guiones, y los comentarios van en su propia línea. Una clave desconocida, repetida o un valor inválido es un error: **el motor no hace nada** hasta que se corrija, y el instalador se niega a empezar.
 - **(cambio, tras la revisión)** Que los grupos de `PASS_GROUPS` existan **no** se comprueba al leer la configuración, sino en el instalador y en `pass`. Si no, borrar una lista dejaría sin funcionar `stop`, `cancel-stop` y `reconcile`.
 - Los números no admiten ceros a la izquierda (`05` es un error).
 - **(cambio)** Los grupos deben ir en minúsculas: el disco del Mac no distingue mayúsculas, así que `Youtube` pasaría la comprobación del archivo pero no coincidiría con ningún grupo.
 - Cambiar la configuración requiere `sudo`. Es fricción deseada.
-- **Si se cambia `TIMED_PRESETS`, hay que volver a ejecutar el instalador,** que regenera la regla de sudoers.
+- **(Fase 6, 2026-10-29) Cambiar `TIMED_PRESETS` o `PASS_GROUPS` no exige volver a ejecutar el instalador:** la regla de sudoers ya no depende de la configuración (ver [Regla de sudoers](#regla-de-sudoers)). El motor lee la configuración en cada comando. Un grupo nuevo de `PASS_GROUPS` debe estar entre las listas instaladas.
 
 ## Estado: `/var/db/efficiency-guardian/state` (`root:wheel 644`)
 
@@ -55,11 +55,15 @@ La carpeta pasa a ser `755` (el instalador la cambia; en la Fase 1 era `700`) y 
 SESSION=none|indefinite|timed
 SESSION_STARTED=<epoch o 0>
 SESSION_ENDS=<epoch o 0>      # solo en sesiones por tiempo
+TIMED_STARTED=<epoch o 0>     # (Fase 6) cuándo empezó la parte por tiempo
 BOOT_ID=<kern.bootsessionuuid>
 STOP_AT=<epoch o 0>           # terminación pendiente
 PASSES_USED=<n>
 PASS_UNTIL=<epoch o 0>
+PASS_GROUP=<grupo o nada>     # (Fase 6) el grupo del pase en curso
 ```
+
+- **(Fase 6)** `TIMED_STARTED` existe porque una sesión sin fin convertida en una por tiempo (S2) conserva su `SESSION_STARTED`, y acortar se mide desde la conversión. Un estado escrito por el motor anterior no tiene estas dos claves: `session_upgrade` (en `session.zsh`) usa `SESSION_STARTED` y, con un pase en curso, el primer grupo de `PASS_GROUPS`.
 
 - `BOOT_ID` sale de `sysctl -n kern.bootsessionuuid`, que cambia en cada arranque (verificado el 2026-10-28).
 - **Se lee línea por línea con validación estricta**, igual que la configuración. Se escribe de forma atómica (temporal + `mv`) y **solo si cambió**: así `reconcile`, cada 30 s, no reescribe el archivo sin motivo.
@@ -80,8 +84,9 @@ Todos en `lib/`, con una responsabilidad cada uno; los más largos (`blocklist.z
 | `state.zsh` | Leer, validar y escribir el estado de forma atómica |
 | `lock.zsh` | El candado (`zsystem flock`) |
 | `session.zsh` | Crear, convertir y terminar sesiones, y aplicar el paso del tiempo (`session_advance`) |
+| `session-ending.zsh` | **(Fase 6)** Pedir el fin con el retraso, el candado y lo que exigen alargar y acortar (lo comparten `stop`, `extend` y `shorten`) |
 | `engine.zsh` | El ciclo común de los comandos: empezar (candado, configuración, estado) y terminar (calcular hosts, guardar estado, escribir hosts, registrar) |
-| `cmd-start.zsh`, `cmd-stop.zsh`, `cmd-cancel-stop.zsh`, `cmd-pass.zsh`, `cmd-status.zsh`, `cmd-reconcile.zsh` | Un archivo por subcomando |
+| `cmd-start.zsh`, `cmd-stop.zsh`, `cmd-cancel-stop.zsh`, `cmd-pass.zsh`, `cmd-status.zsh`, `cmd-reconcile.zsh`, y en la Fase 6 `cmd-extend.zsh` y `cmd-shorten.zsh` | Un archivo por subcomando |
 | `status-json.zsh` | Salida JSON para la app |
 | `cli.zsh` | Validar los argumentos y llamar al subcomando (antes estaba en `bin/guardian`) |
 
@@ -98,10 +103,12 @@ Cambios en módulos de la Fase 1:
 | Comando | ¿Root? | Comportamiento |
 |---|---|---|
 | `guardian start` | Sí | Sin sesión: crea una **indefinida** (`PASSES_USED=0`). Con sesión: no cambia nada, salvo que **cancela una terminación pendiente** ("sigo trabajando"). Es idempotente frente a dobles eventos de Atajos. |
-| `guardian start <min>` | Sí | `<min>` debe estar en `TIMED_PRESETS`. Sin sesión: crea una **por tiempo**. Con una indefinida: la convierte (S2). Con otra por tiempo: error. |
+| `guardian start <min>` | Sí | `<min>` debe estar en `TIMED_PRESETS`. Sin sesión: crea una **por tiempo**. Con una indefinida: la convierte (S2). Con otra por tiempo: error (para eso están `extend` y `shorten`). |
 | `guardian stop` | Sí | Sin sesión: nada. Por tiempo con `TIMED_LOCK=yes`: error "termina a las HH:MM". Con `STOP_DELAY_MINUTES=0`: termina ya. Si no: fija `STOP_AT = ahora + retraso`. Si ya había una terminación pendiente, no la alarga ni la acorta. |
 | `guardian cancel-stop` | Sí | Borra `STOP_AT`: "seguir trabajando". |
-| `guardian pass` | Sí | Requiere sesión, ningún pase en curso y `PASSES_USED < PASS_MAX_PER_SESSION`. Quita de hosts los grupos de `PASS_GROUPS`, fija `PASS_UNTIL` y suma 1 a `PASSES_USED`. Si no se cumple, error con un mensaje claro ("no quedan pases en esta sesión (3/3)"). Se puede usar durante una terminación pendiente. |
+| `guardian pass [grupo]` | Sí | Requiere sesión, ningún pase en curso y `PASSES_USED < PASS_MAX_PER_SESSION`. **(Fase 6)** Quita de hosts **un** grupo de `PASS_GROUPS` (sin argumento, el primero; antes, todos a la vez), fija `PASS_UNTIL` y `PASS_GROUP`, y suma 1 a `PASSES_USED`: el límite es compartido entre todos los grupos. Si no se cumple, error con un mensaje claro ("no quedan pases en esta sesión (3/3)"). Se puede usar durante una terminación pendiente. |
+| `guardian extend [min]` | Sí | **(Fase 6)** Solo con una sesión por tiempo y sin terminación pendiente. **(cambio, 2026-10-29)** Con `<min>` (de `TIMED_PRESETS`, más que lo que dura ahora): la sesión pasa a durar eso en total desde `TIMED_STARTED`, como `shorten`; también con candado. Sin minutos: pasa a **sin fin**, con los pases que llevaba; con candado se rechaza (con `stop` sería saltárselo). |
+| `guardian shorten <min>` | Sí | **(Fase 6)** Igual, más el candado. La sesión pasa a durar `<min>` (menos que ahora) desde `TIMED_STARTED`. Si esa hora llega después que el retraso al terminar, el fin pasa a esa hora; si no, es igual que `stop`. Detalle en la [Fase 6](fase-6-ajustes-y-controles.md#a-alargar-y-acortar-una-sesión-por-tiempo). |
 | `guardian status [--json]` | No | Texto para personas, o JSON para la app. **(cambio)** Muestra la sesión como la dejaría `reconcile` ahora mismo (si ya venció, dice que terminó), sin escribir nada; "Bloqueo" es lo que hay en hosts en ese instante. |
 | `guardian reconcile` | Sí (solo lo llama el LaunchDaemon) | Ver abajo. Si no cambió nada, no escribe nada ni dice nada. |
 
@@ -115,12 +122,13 @@ Cambios en módulos de la Fase 1:
 ```json
 {
   "now": 1800000060, "session": "timed", "session_started": 1800000000, "session_ends": 1800003000,
-  "stop_at": 0, "pass_until": 1800000360, "passes_used": 1, "passes_max": 3, "pass_minutes": 5,
+  "timed_started": 1800000000, "stop_at": 0, "pass_until": 1800000360, "pass_group": "youtube",
+  "passes_used": 1, "passes_max": 3, "pass_minutes": 5,
   "pass_groups": ["youtube"], "stop_delay_minutes": 5, "timed_lock": false,
   "timed_presets": [25, 50, 90], "autostart_at_boot": true, "blocking": true, "blocked_domains": 71
 }
 ```
-(La salida real tiene una clave por línea.)
+(La salida real tiene una clave por línea. `timed_started` y `pass_group` son de la Fase 6; `pass_group` es `""` sin pase.)
 
 ## El paso del tiempo (`session_advance`) y `reconcile`
 
@@ -128,13 +136,13 @@ Cambios en módulos de la Fase 1:
 
 1. Si `STOP_AT > 0` y ya pasó, terminar la sesión.
 2. Si la sesión es por tiempo y `SESSION_ENDS` ya pasó, terminarla.
-3. Si `PASS_UNTIL > 0` y ya pasó, ponerlo a 0.
+3. Si `PASS_UNTIL > 0` y ya pasó, ponerlo a 0 (y `PASS_GROUP` vacío).
 4. **¿Arranque nuevo?** (`BOOT_ID` guardado ≠ el actual)
    - Si la sesión es **indefinida**, se termina: "termina con el apagado".
    - Si es **por tiempo**, continúa: la hora es la del reloj, así que reiniciar no salta un candado.
    - Guardar el `BOOT_ID` nuevo.
    - Si queda sin sesión y `AUTOSTART_AT_BOOT=yes`, crear una **indefinida nueva** con el contador a 0.
-5. **Aplicar:** el bloque deseado es "todos los grupos, menos `PASS_GROUPS` si hay un pase en curso", o ninguno si no hay sesión. Reescribir hosts **solo si es distinto**. Esto también restaura el bloque si alguien editó hosts a mano.
+5. **Aplicar:** el bloque deseado es "todos los grupos, menos el del pase en curso (`PASS_GROUP`)", o ninguno si no hay sesión. Reescribir hosts **solo si es distinto**. Esto también restaura el bloque si alguien editó hosts a mano.
 
 **(cambio)** El arranque nuevo va **después** de los vencimientos (en la especificación original iba primero). Si una sesión por tiempo venció con el Mac apagado, debe terminar antes de decidir el arranque automático; si no, ese día no habría sesión automática.
 
@@ -149,13 +157,15 @@ Cambios en módulos de la Fase 1:
 
 ## Regla de sudoers
 
-El instalador la genera a partir de `TIMED_PRESETS`. Solo argumentos exactos, sin comodines (en sudoers, un comando con argumentos solo admite esos argumentos exactos):
+**(cambio, 2026-10-29, Fase 6)** Ya no depende de la configuración: cambiar `TIMED_PRESETS` o `PASS_GROUPS` no exige reinstalar. Los comandos sin más van como texto exacto; los que llevan un número o un grupo, como un patrón que **empieza con el subcomando** (sudo solo lee un patrón si los argumentos empiezan con `^`, [02](../investigacion/02-integracion-macos.md#reglas-para-la-regla-de-sudoers-confianza-alta-man-sudoers-local)). Los patrones son los mismos con los que el motor valida su línea de comandos (`MINUTES_REGEX` en `config-check.zsh`, `GROUP_REGEX` en `blocklist.zsh`), y después el motor rechaza lo que no esté en la configuración, que solo root puede cambiar. G = `/usr/local/sbin/guardian`:
 
 ```
-<usuario> ALL=(root) NOPASSWD: /usr/local/sbin/guardian start, /usr/local/sbin/guardian start 25, \
-  /usr/local/sbin/guardian start 50, /usr/local/sbin/guardian start 90, /usr/local/sbin/guardian stop, \
-  /usr/local/sbin/guardian cancel-stop, /usr/local/sbin/guardian pass
+<usuario> ALL=(root) NOPASSWD: G start, G ^start [1-9][0-9]?[0-9]?$, G stop, G cancel-stop, G pass, \
+  G ^pass [a-z0-9-]+$, G extend, G ^extend [1-9][0-9]?[0-9]?$, G ^shorten [1-9][0-9]?[0-9]?$
 ```
+
+- **Antes** se generaba desde la configuración con argumentos fijos (`G start 25`, `G pass youtube`…), y había que reinstalar al cambiar las duraciones o los grupos.
+- **Primer intento, instalado el 2026-10-29 y rechazado por el Mac:** `G start ""` y `G start ^[1-9]…$`. Los dos se leen como texto literal, y sudo pidió contraseña para todo. `visudo` lo aceptaba: solo comprueba la sintaxis. Desde entonces `tests/test-sudoers.zsh` imita cómo compara sudo, y falla con ese intento.
 
 `status` no está (se usa sin sudo) y `reconcile` tampoco: solo lo ejecuta launchd como root.
 
@@ -167,7 +177,7 @@ El instalador la genera a partir de `TIMED_PRESETS`. Solo argumentos exactos, si
 - **Paso 5:** la verificación de permisos incluye la configuración, `/Library/LaunchDaemons` y el plist. Si algo es inseguro, quita la regla de sudoers **y el LaunchDaemon**.
 - **Paso 6:** las líneas manuales antiguas (el aviso ahora dice que tampoco funcionaría un pase).
 - **Paso 7 (nuevo):** carga el LaunchDaemon. Va antes que la regla de sudoers para que, si la regla falla, el LaunchDaemon no quede descargado.
-- **Paso 8:** regla de sudoers desde la configuración.
+- **Paso 8:** regla de sudoers (desde la Fase 6 no depende de la configuración).
 - Al final muestra `guardian status`.
 
 **`uninstall.sh`:** comprueba primero que los marcadores de hosts estén sanos (si no, no toca nada). Después quita el LaunchDaemon **y la regla de sudoers** (así ni `reconcile` ni un atajo pueden volver a poner el bloque), toma el candado del motor (espera a un `guardian` en curso), **quita el bloque en el acto** (sin el retraso: desinstalar ya exige sudo) y borra el estado, el motor, los módulos y las listas. **Conserva** las copias de seguridad y la configuración del usuario.
@@ -212,11 +222,13 @@ Sin root, como en la Fase 1 (`zsh tests/run.zsh`). Variables solo para pruebas, 
 | `test-sessions.zsh` | `start`, `start <min>`, fuera de `TIMED_PRESETS`, S2 (conversión, rechazo, no salta el retraso) |
 | `test-stop.zsh` | Retraso al terminar, `cancel-stop`, `start` durante la espera, candado |
 | `test-pass.zsh` | Pase: qué grupos quita, vencimiento, límites, durante una terminación pendiente |
-| `test-pass-config.zsh` | Pase con listas dañadas (no se gasta), sin pases, varios grupos, contador de una sesión nueva |
+| `test-pass-config.zsh` | Pase con listas dañadas (no se gasta), sin pases, varios grupos (uno por pase; Fase 6), un grupo sin pase, estado anterior con un pase en curso, contador de una sesión nueva |
+| `test-extend.zsh`, `test-shorten.zsh` | **(Fase 6)** Alargar (a una duración total, o a sin fin) y acortar: desde dónde se mide, el retraso, el candado, rechazos, sesión convertida, estado anterior |
 | `test-reconcile.zsh` | Arranques, arranque automático, primera vez sin estado, actualización desde la Fase 1, estado dañado, hosts editado a mano, sin cambios no escribe |
 | `test-status.zsh` | Texto y JSON (leído con `plutil`, que lo valida) |
 | `test-lock.zsh` | Un comando espera al otro; `status` no espera |
-| `test-install.zsh` | Regla de sudoers desde la configuración, plist del LaunchDaemon, rutas |
+| `test-install.zsh` | Plist del LaunchDaemon, permisos, rutas |
+| `test-sudoers.zsh` | Regla de sudoers: qué admite, imitando cómo compara sudo; que no dependa de la configuración |
 
 Los casos mínimos de la especificación original están todos cubiertos.
 
@@ -239,9 +251,9 @@ Además de la [verificación de la Fase 1](fase-1-motor.md#verificación-manual-
 
 Anota los resultados en la bitácora de [PLAN.md](../../PLAN.md).
 
-### Fallos encontrados en la verificación manual (sin arreglar)
+### Fallos encontrados en la verificación manual
 
-- **2026-10-29 · La pista de `stop` no se puede ejecutar tal cual.** `stop` dice "Para seguir trabajando: guardian cancel-stop." ([lib/cmd-stop.zsh](../../lib/cmd-stop.zsh)). El usuario lo escribió y obtuvo `zsh: command not found: guardian`: `/usr/local/sbin` no está en el PATH del usuario (`/etc/paths` de macOS no lo incluye), y además hace falta `sudo -n`. Lo que funciona es `sudo -n /usr/local/sbin/guardian cancel-stop`. Es el único mensaje del motor que sugiere un comando. Arreglo posible: escribir el comando completo en el mensaje. Esperar a la app (5.6): con ella casi nadie escribirá comandos.
+- **2026-10-29 · La pista de `stop` no se puede ejecutar tal cual. Arreglado el mismo día (sesión 8, con la Fase 6), sin instalar:** ahora dice `sudo /usr/local/sbin/guardian cancel-stop`, sin punto final; `test-stop.zsh` lo comprueba. Era el original: `stop` dice "Para seguir trabajando: guardian cancel-stop." ([lib/cmd-stop.zsh](../../lib/cmd-stop.zsh)). El usuario lo escribió y obtuvo `zsh: command not found: guardian`: `/usr/local/sbin` no está en el PATH del usuario (`/etc/paths` de macOS no lo incluye), y además hace falta `sudo -n`. Lo que funciona es `sudo -n /usr/local/sbin/guardian cancel-stop`. Es el único mensaje del motor que sugiere un comando. Arreglo posible: escribir el comando completo en el mensaje. Esperar a la app (5.6): con ella casi nadie escribirá comandos.
 
 ## Medir para ajustar (4.5)
 

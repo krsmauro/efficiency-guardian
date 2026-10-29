@@ -56,13 +56,17 @@ run_guardian stop
 at_minute 4
 check timed-pass-stop
 
-section "Candado, varios grupos de pase y sin arranque automático"
+section "Candado, sin fin convertida, pase del segundo grupo y sin arranque automático"
 new_case $LISTS
 set_config TIMED_LOCK yes
 set_config PASS_GROUPS youtube,facebook
 set_config AUTOSTART_AT_BOOT no
 set_config TIMED_PRESETS 15,45
+run_guardian start
+at_minute 10
 run_guardian start 45
+at_minute 11
+run_guardian pass facebook
 check locked
 
 finish

@@ -14,6 +14,7 @@ assert_false "youtube.com desbloqueado" blocked youtube.com
 assert_false "www.youtube.com desbloqueado" blocked www.youtube.com
 assert_true "facebook.com sigue bloqueado" blocked facebook.com
 assert_eq "cuenta el pase" 1 "$(state_value PASSES_USED)"
+assert_eq "anota el grupo" youtube "$(state_value PASS_GROUP)"
 at_minute 4
 run_guardian reconcile
 assert_false "minuto 4: sigue desbloqueado" blocked youtube.com
@@ -22,6 +23,7 @@ run_guardian reconcile
 assert_contains "minuto 5: lo dice" "fin del pase" "$OUT"
 assert_true "minuto 5: youtube.com bloqueado otra vez" blocked youtube.com
 assert_eq "minuto 5: sin pase en curso" 0 "$(state_value PASS_UNTIL)"
+assert_eq "minuto 5: ni grupo" "" "$(state_value PASS_GROUP)"
 
 section "Con un pase en curso, otro es rechazado"
 at_minute 10
@@ -29,7 +31,7 @@ run_guardian pass
 at_minute 12
 run_guardian pass
 assert_status "error" 1 $ST "$OUT"
-assert_contains "dice hasta cuándo dura el actual" "ya hay un pase en curso, hasta las 08:15" "$OUT"
+assert_contains "dice cuál y hasta cuándo dura el actual" "ya hay un pase en curso: youtube, hasta las 08:15" "$OUT"
 assert_eq "no lo cuenta" 2 "$(state_value PASSES_USED)"
 
 section "El 4.º es rechazado"
@@ -60,6 +62,7 @@ assert_status "sale con 0" 0 $ST "$OUT"
 at_minute 5
 run_guardian reconcile
 assert_eq "y la sesión termina a su hora" none "$(state_value SESSION)"
+assert_eq "sin pase ni grupo" "0 ''" "$(state_value PASS_UNTIL) ${(qq)$(state_value PASS_GROUP)}"
 assert_same_file "hosts vuelve al original" $CASE/original $CASE/hosts
 
 finish

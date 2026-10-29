@@ -77,6 +77,8 @@ Swift es **el único lenguaje con una ventaja enorme aquí**, pero **solo para l
   ```
   mauro ALL=(root) NOPASSWD: /usr/local/sbin/guardian start, /usr/local/sbin/guardian stop
   ```
+  - **(aclarado el 2026-10-29, tras un fallo en el Mac)** El ejemplo es correcto: los "argumentos" de una entrada son todo lo que va tras la ruta, así que `guardian start` admite solo `start`, exacto. Lo de "sin argumentos, cualquiera" vale para la ruta sola (`/usr/local/sbin/guardian`), y `""` significa "ninguno" solo si es lo único tras la ruta. Un agente lo leyó mal ese día, escribió `G start ""` y el Mac lo rechazó.
+  - **Patrones (desde sudo 1.9.10; este Mac tiene 1.9.17p2):** los argumentos son una expresión regular (ERE) solo si **empiezan** con `^` y terminan con `$`, y se comparan con todos los argumentos del usuario unidos por espacios. Por eso el subcomando va dentro: `G ^start [1-9][0-9]?[0-9]?$`. Escrito `G start ^[1-9]…$`, sudo lo lee como texto literal y no admite nada: así se instaló el 2026-10-29 y el Mac pidió contraseña para `start 25`. Verificado en el código de sudo (`match_command.c`, `command_args_match`; `toke.l`: solo el primer argumento puede abrir un patrón, y dentro de un patrón la coma y el espacio no cortan). La coma de `{0,2}` rompía `visudo` solo porque el patrón no iba primero. Regla actual: [fase 4](../fases/fase-4-sesiones-y-tiempo.md#regla-de-sudoers).
 - **El script y todas las carpetas de su ruta deben ser de root y no escribibles por el usuario.**
   - Si no, cualquier proceso del usuario (incluido malware) podría reemplazar el script y obtener root sin contraseña.
   - Verificado: `/usr/local` es `root:wheel 755`; `/usr/local/sbin` no existe y lo crea el instalador.

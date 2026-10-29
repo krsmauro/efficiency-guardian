@@ -4,14 +4,18 @@
 #   SESSION=none|indefinite|timed
 #   SESSION_STARTED=<epoch>      cuándo empezó la sesión (0 sin sesión)
 #   SESSION_ENDS=<epoch o 0>     fin de una sesión por tiempo
+#   TIMED_STARTED=<epoch o 0>    cuándo empezó la parte por tiempo (acortar se mide desde ahí)
 #   BOOT_ID=<uuid>               arranque en el que se escribió (ver clock.zsh)
 #   STOP_AT=<epoch o 0>          terminación pendiente (retraso al terminar)
 #   PASSES_USED=<n>              pases usados en esta sesión
 #   PASS_UNTIL=<epoch o 0>       fin del pase en curso
+#   PASS_GROUP=<grupo o nada>    el grupo que desbloquea el pase en curso
 # En memoria, cada clave es un elemento del array asociativo S.
 # Se lee línea por línea, sin "source": nunca se ejecuta como código.
 
-readonly STATE_KEYS=(SESSION SESSION_STARTED SESSION_ENDS BOOT_ID STOP_AT PASSES_USED PASS_UNTIL)
+readonly STATE_KEYS=(
+  SESSION SESSION_STARTED SESSION_ENDS TIMED_STARTED BOOT_ID STOP_AT PASSES_USED PASS_UNTIL PASS_GROUP
+)
 
 # state_load
 # Deja el estado en S, y en STATE_EXISTS 1 si el archivo existía y era válido.
@@ -19,7 +23,7 @@ readonly STATE_KEYS=(SESSION SESSION_STARTED SESSION_ENDS BOOT_ID STOP_AT PASSES
 # en 0: session_init (session.zsh) decide cómo empezar.
 state_load() {
   local file=$DATA_DIR/state line key value
-  typeset -gA S=(SESSION none SESSION_STARTED 0 SESSION_ENDS 0 BOOT_ID '' STOP_AT 0 PASSES_USED 0 PASS_UNTIL 0)
+  state_reset
   typeset -g STATE_EXISTS=0 STATE_TEXT=
 
   if [[ ! -e $file ]]; then return 0; fi
@@ -46,7 +50,8 @@ state_valid() {
   case $1 in
     SESSION) [[ $2 == (none|indefinite|timed) ]] ;;
     BOOT_ID) [[ $2 =~ $BOOT_ID_REGEX ]] ;;
-    SESSION_STARTED|SESSION_ENDS|STOP_AT|PASSES_USED|PASS_UNTIL) [[ $2 =~ '^(0|[1-9][0-9]{0,11})$' ]] ;;
+    SESSION_STARTED|SESSION_ENDS|TIMED_STARTED|STOP_AT|PASSES_USED|PASS_UNTIL) [[ $2 =~ '^(0|[1-9][0-9]{0,11})$' ]] ;;
+    PASS_GROUP) [[ -z $2 || $2 =~ '^[a-z0-9-]+$' ]] ;;   # como GROUP_REGEX (blocklist.zsh)
     *) return 1 ;;
   esac
 }
@@ -55,7 +60,13 @@ state_valid() {
 # nuevo como si no existiera (session_init conserva el bloqueo que haya en hosts).
 state_damaged() {
   warn "estado dañado en $DATA_DIR/state ($1): se empieza de nuevo"   # warn también lo registra
-  typeset -gA S=(SESSION none SESSION_STARTED 0 SESSION_ENDS 0 BOOT_ID '' STOP_AT 0 PASSES_USED 0 PASS_UNTIL 0)
+  state_reset
+}
+
+# S "sin sesión". Las claves que falten en el archivo se quedan con estos valores.
+state_reset() {
+  typeset -gA S=(SESSION none SESSION_STARTED 0 SESSION_ENDS 0 TIMED_STARTED 0 BOOT_ID ''
+                 STOP_AT 0 PASSES_USED 0 PASS_UNTIL 0 PASS_GROUP '')
 }
 
 # Deja en REPLY el texto del archivo, con las claves siempre en el mismo orden.

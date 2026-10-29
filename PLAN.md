@@ -20,18 +20,18 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 
 ## Estado actual
 
-- **Regla del usuario (2026-10-29): no escribir más código hasta que el usuario haga las pruebas manuales** (1.5, 1.6, 4.4, 3.1 y 5.6). Si un agente encuentra un fallo antes, **lo documenta** (en la especificación de su fase y en la bitácora) para que otro agente lo arregle después, cuando el usuario lo pida. No lo arregla.
-- **Fases 1 y 4: instaladas el 2026-10-29** (1.5 hecho, al segundo intento: ver la bitácora, sesión 6). Verificación manual (1.6 y 4.4) **cerrada por el usuario el mismo día, en parte**: no quiere seguir con checklists; lo que falte lo descubrirá usándolo y lo reportará. Funcionan en el sistema real: bloqueo de los 10 grupos en los 5 navegadores, regla de sudoers, pase, retraso al terminar y LaunchDaemon. **Sin probar** (casillas sin marcar en cada checklist): sesión por tiempo (`start 25`), reposo, reposo de una noche, arranque automático tras reiniciar, candado, vista previa de Studio. **Fallo conocido sin arreglar:** la pista de `stop` ([Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#fallos-encontrados-en-la-verificación-manual-sin-arreglar)).
-- **Fase 5: instalada en `/Applications` el 2026-10-29; verificación del usuario (5.6) en curso.** El ícono, el menú y el ítem de inicio funcionan con el motor real. **Fallo encontrado:** los submenús se cerraban solos a los 1-2 s. Arreglado y con prueba, **pendiente de que el usuario lo confirme** ([detalle](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-verificación-manual-56)). De la revisión anterior siguen sin probar los fallos 1 y 4 ([lista](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-revisión-2026-10-29-arreglados-sin-probar-a-mano)). Falta 5.5 (decidir si absorbe la Fase 3).
+- **Regla del usuario (2026-10-29):** no construir código nuevo encima de código que el usuario no ha probado en el Mac. Si un agente encuentra un fallo, **lo documenta** (en la especificación de su fase y en la bitácora); lo arregla cuando el usuario lo pide o cuando el usuario lo reportó. **La Fase 6 (A y B) se escribió con su permiso** (sesión 7: la revisó y quedó como siguiente paso) y se apoya en el motor y la app, que ya funcionan en el Mac.
+- **Fase 6, A y B: instalados el 2026-10-29; "Alargar" funcionó sin contraseña.** Al probarlo, el usuario pidió cambios, ya escritos y con pruebas. **El primer intento de instalarlos falló:** la regla de sudoers estaba mal escrita y la app pedía contraseña para todo. **La regla corregida está sin instalar** (hasta entonces, la app no puede ejecutar nada; el bloqueo y el LaunchDaemon funcionan). Los cambios: "Alargar" elige la duración total (de 25 a 90), "Alargar ▸ Sin fin", y una regla de sudoers que no depende de la configuración ([detalle](docs/fases/fase-6-ajustes-y-controles.md#cambios-tras-la-primera-prueba-de-a-2026-10-29)). **Siguiente paso, del usuario:** reinstalar el motor y luego cambiar la app (cerrándola antes), y verificar ([orden y checklist corto](docs/fases/fase-6-ajustes-y-controles.md#verificación-manual-de-a-y-b-la-hace-el-usuario)). **Ojo:** con la configuración instalada (`PASS_GROUPS=youtube`) el pase se ve igual que antes; para otros sitios, editar la configuración con sudo (ya sin reinstalar) o esperar a C.
+- **Fases 1 y 4: instaladas el 2026-10-29** (1.5 hecho, al segundo intento: ver la bitácora, sesión 6). Verificación manual (1.6 y 4.4) **cerrada por el usuario el mismo día, en parte**: no quiere seguir con checklists; lo que falte lo descubrirá usándolo y lo reportará. Funcionan en el sistema real: bloqueo de los 10 grupos en los 5 navegadores, regla de sudoers, pase, retraso al terminar, LaunchDaemon y sesión por tiempo (desde la app). **Sin probar:** reposo, reposo de una noche, arranque automático tras reiniciar, candado, vista previa de Studio. La pista de `stop` ([Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#fallos-encontrados-en-la-verificación-manual)) está arreglada en el repositorio, sin instalar.
+- **Fase 5: instalada en `/Applications` el 2026-10-29; verificación del usuario (5.6) en curso.** El ícono, el menú, el ítem de inicio, las notificaciones, convertir a sesión por tiempo y el pase funcionan con el motor real; el arreglo de los submenús lo confirmó el usuario. **Pendiente:** que la app se abra sola al iniciar sesión, el aviso del arranque, y si el menú se cierra solo durante un pase ([detalle](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-verificación-manual-56)). De la revisión anterior siguen sin probar los fallos 1 y 4 ([lista](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-revisión-2026-10-29-arreglados-sin-probar-a-mano)). Falta 5.5 (decidir si absorbe la Fase 3).
 - **Fase 3: script escrito y probado sin navegadores** (3.2 y la mitad de 3.3). **No lo instala todavía el instalador:** quién lo ejecuta cada 15 s depende de la prueba de permisos 3.1.
-- **Fase 6, primera parte: especificación revisada por el usuario el 2026-10-29** (ajustes sin Terminal, alargar y acortar, pases para otros sitios). **Siguiente: el agente escribe A y B** ([orden](docs/fases/fase-6-ajustes-y-controles.md#orden-propuesto)).
-- **Siguientes pasos del usuario** (anteriores a la Fase 6, siguen valiendo):
+- **Siguientes pasos del usuario:**
+  - **Reinstalar y verificar A y B** (arriba): `sudo ./install.sh` otra vez, por la regla corregida. La app nueva ya está en `/Applications`.
   - **Usar el motor a diario** y reportar lo que falle. Si reporta un fallo, el agente lo arregla (con una prueba que lo reproduzca) y lo anota en la especificación de su fase.
-  - **Cuando quiera:** compilar e instalar la app (`zsh app/build.zsh` y copiarla a `/Applications`, sin sudo; [instrucciones](docs/fases/fase-5-app-barra-de-menus.md#compilar-e-instalar-lo-hace-el-usuario-sin-sudo)) y hacer su [verificación](docs/fases/fase-5-app-barra-de-menus.md#verificación-manual-56-la-hace-el-usuario-con-el-motor-instalado) (5.6).
   - La prueba de permisos de la Fase 3 (3.1), sin sudo y en cualquier momento: `zsh tools/try-close-tabs.zsh terminal` y luego `agent` ([instrucciones](docs/fases/fase-3-cerrar-pestanas.md#cómo-hacer-la-prueba-toolstry-close-tabszsh-sin-sudo)). Anotar a nombre de quién pide macOS el permiso.
-- **Después, el agente (solo cuando el usuario lo pida, tras sus pruebas):** con el resultado de 3.1, decidir 5.5 (¿cierra las pestañas la app o un LaunchAgent?) y escribir el disparador de la Fase 3. Con los resultados de 1.6, 4.4 y 5.6, corregir lo que falle. O guiar la Fase 2 (manual).
-- **Código escrito:** motor `bin/guardian` + 20 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, `close-tabs/` (Fase 3, 4 archivos), `tools/try-close-tabs.zsh`, y la app en `app/` (Fase 5: 25 archivos de Swift, `Package.swift` y `build.zsh`).
-- **Pruebas:** 612 comprobaciones en `tests/` (`zsh tests/run.zsh`) y 63 de la app (`swift test --package-path app`). Todas pasan. **Instalado** el motor (Fases 1 y 4); las 4 líneas manuales de YouTube se quitaron al instalar.
+- **Después, el agente (cuando el usuario lo pida):** tras verificar A y B, la prueba corta de la ventana de contraseña y luego C ([orden](docs/fases/fase-6-ajustes-y-controles.md#orden-propuesto)). Con el resultado de 3.1, decidir 5.5 y escribir el disparador de la Fase 3. O guiar la Fase 2 (manual).
+- **Código escrito:** motor `bin/guardian` + 23 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, `close-tabs/` (Fase 3, 4 archivos), `tools/try-close-tabs.zsh`, y la app en `app/` (Fases 5 y 6: 28 archivos de Swift, `Package.swift` y `build.zsh`).
+- **Pruebas:** 778 comprobaciones en `tests/` (`zsh tests/run.zsh`) y 75 de la app (`swift test --package-path app`). Todas pasan. **Instalado:** la app con los cambios tras la primera prueba, y el motor con la regla de sudoers del primer intento, que no funciona.
 - **Última actualización:** 2026-10-29.
 
 ## Cómo usar este plan (agentes)
@@ -50,9 +50,9 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 ## Arquitectura
 
 ```
-  App de barra de menús (Swift, Fase 5) ─┐
-  Concentración "Trabajo profundo"      ─┤  sudo -n guardian start [min] | stop | cancel-stop | pass
-     + automatizaciones de Atajos (F2)  ─┘        │ (regla sudoers, argumentos exactos)
+  App de barra de menús (Swift, Fase 5) ─┐  sudo -n guardian start [min] | stop | cancel-stop
+  Concentración "Trabajo profundo"      ─┤     | pass [grupo] | extend [min] | shorten <min> (F6)
+     + automatizaciones de Atajos (F2)  ─┘        │ (regla sudoers, argumentos acotados)
                                                   ▼
   LaunchDaemon cada 30 s (F4) ──▶  /usr/local/sbin/guardian  (zsh, root) ◀── estado + configuración
      reconcile: fin de pase,              │ reescribe SOLO su bloque
@@ -69,7 +69,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 | D1 | Bloquear con `/etc/hosts`, con **2 líneas por dominio, IPv4 e IPv6** (`0.0.0.0` y `::`) | ✅ | Cubre los 5 navegadores, incluido Thorium. Chromium lo respeta incluso con DNS seguro. Gratis. La línea IPv6 cierra la fuga que tenía el bloqueo manual. → [01](docs/investigacion/01-metodos-de-bloqueo.md) |
 | D2 | Activar también con un modo de Concentración **nativo y dedicado** ("Trabajo profundo") + automatizaciones de Atajos | ✅ | Es el botón que el usuario ya usa. Sin código. → [02](docs/investigacion/02-integracion-macos.md) |
 | D3 | Motor en **zsh**; interfaz en **Swift** | ✅ | El motor corre como root: necesita un intérprete del sistema y cero dependencias. Swift es lo único que da una interfaz nativa de barra de menús. → [02](docs/investigacion/02-integracion-macos.md#por-qué-el-motor-es-un-script-zsh-y-no-typescript-o-python) |
-| D4 | Permisos de root con una regla de sudoers de **argumentos exactos**, más un LaunchDaemon para lo que depende del tiempo | ✅ | Simple, sin helper privilegiado ni firma de pago. → [02](docs/investigacion/02-integracion-macos.md#cómo-dar-permisos-de-root-sin-contraseña) |
+| D4 | Permisos de root con una regla de sudoers de **argumentos acotados**, más un LaunchDaemon para lo que depende del tiempo | ✅ | Simple, sin helper privilegiado ni firma de pago. → [02](docs/investigacion/02-integracion-macos.md#cómo-dar-permisos-de-root-sin-contraseña). **(2026-10-29)** Antes, argumentos exactos generados desde la configuración; ahora `""` o patrones, sin depender de ella (cambiar duraciones o grupos no exige reinstalar). Los patrones deben empezar con el subcomando (`G ^start [1-9]…$`): el primer intento no lo hacía y el Mac lo rechazó → [fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#regla-de-sudoers) |
 | D5 | **Pase temporal:** 5 min y máximo 3 por sesión, configurables. Por defecto solo para YouTube. | ✅ usuario | → [fase 4](docs/fases/fase-4-sesiones-y-tiempo.md) |
 | D6 | Grupos bloqueados: YouTube, Facebook, Instagram, TikTok, X, Reddit, Threads, Twitch, Pinterest y WhatsApp | ✅ usuario | Los dominios de WhatsApp, Twitch y Pinterest están sin investigar a fondo: se verifican en 1.6. → [04](docs/investigacion/04-dominios.md) |
 | D6b | **YouTube Studio no se bloquea** | ✅ usuario | Lo usa para trabajar |
@@ -82,7 +82,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 | D13 | **Archivos de código con una sola responsabilidad y unas 100 líneas como máximo (150 es inaceptable).** Lo comprueba `tests/check-length.zsh`. | ✅ usuario | Permite depurar a mano. El motor se divide en `bin/guardian` (entrada) + módulos en `lib/`. Como el motor corre como root, los módulos se cargan solo desde una ruta fija de root. → [fase 1](docs/fases/fase-1-motor.md#regla-de-tamaño-d13-requisito-del-usuario) |
 | D14 | **Para quién:** "yo ahora, otros después". Se construye para este Mac, sin cerrar la puerta a compartirla | ✅ usuario (2026-10-29) | Compartirla exige firma Developer ID (de pago), instalador sin Terminal y un helper en vez de sudoers: queda fuera por ahora → [fase 6](docs/fases/fase-6-ajustes-y-controles.md#yo-ahora-otros-después-qué-se-cuida-ya) |
 | D15 | **Ajustes desde la app, con la contraseña del Mac al guardar** (nada de Terminal) | ✅ usuario (2026-10-29) | Misma barrera que hoy da `sudo` → [fase 6](docs/fases/fase-6-ajustes-y-controles.md#c-ajustes-en-la-app-con-la-contraseña-al-guardar) |
-| D16 | **Alargar y acortar** una sesión por tiempo (no pasarla a sin fin). Alargar no tiene tope. **Acortar nunca termina antes que el retraso al terminar**: si no, es igual que `stop` | ✅ usuario (2026-10-29) | → [fase 6](docs/fases/fase-6-ajustes-y-controles.md#a-alargar-y-acortar-una-sesión-por-tiempo) |
+| D16 | **Alargar y acortar** una sesión por tiempo, eligiendo la **duración total**; alargar también a **sin fin** (sin tope). **Acortar nunca termina antes que el retraso al terminar**: si no, es igual que `stop`. Con candado no se puede pasar a sin fin | ✅ usuario (2026-10-29; duración total y "Sin fin" tras la primera prueba) | → [fase 6](docs/fases/fase-6-ajustes-y-controles.md#cambios-tras-la-primera-prueba-de-a-2026-10-29) |
 
 ## Fases
 
@@ -93,7 +93,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 | 3 | Cerrar las pestañas abiertas de sitios bloqueados | 🔨 [script escrito](docs/fases/fase-3-cerrar-pestanas.md) (falta la prueba de permisos 3.1 y el disparador) |
 | 4 | Sesiones por tiempo e indefinidas, retraso al terminar, arranque automático, pases | ✅ [código escrito](docs/fases/fase-4-sesiones-y-tiempo.md) (falta 4.4) |
 | 5 | App de barra de menús en Swift (v1) | ✅ [código escrito](docs/fases/fase-5-app-barra-de-menus.md) (falta 5.5 y la verificación 5.6) |
-| 6 | Ajustes y controles desde la app (primera parte); después, pulir la experiencia | ✅ [lista](docs/fases/fase-6-ajustes-y-controles.md) (revisada por el usuario) |
+| 6 | Ajustes y controles desde la app (primera parte); después, pulir la experiencia | 🔨 [A y B escritos](docs/fases/fase-6-ajustes-y-controles.md) (falta reinstalar y verificar; C sin código) |
 
 ### Fase 1: motor de bloqueo
 - [x] 1.1 Crear `blocklists/*.txt` a partir de [04-dominios.md](docs/investigacion/04-dominios.md): los 10 grupos de D6.
@@ -130,7 +130,13 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 - [ ] 5.6 **Usuario:** compilar, instalar y verificar a mano (checklist en la especificación).
 
 ### Fase 6: experiencia de usuario
-Investigar referencias, definir qué es una experiencia "asombrosa" para el usuario, prototipar y probar. Candidatos (detalle en la [especificación de la Fase 5](docs/fases/fase-5-app-barra-de-menus.md#fuera-de-la-v1--fase-6)):
+Primera parte, [ajustes y controles](docs/fases/fase-6-ajustes-y-controles.md):
+- [x] 6.1 A (alargar y acortar) y B (un pase por sitio): motor, regla de sudoers y app, con pruebas.
+- [ ] 6.2 **Usuario:** `sudo ./install.sh`, compilar e instalar la app, y verificar A y B. (Instalado y "Alargar" probado; con los cambios pedidos al probarlo, falta otra reinstalación.)
+- [ ] 6.3 **Usuario:** prueba corta de la ventana de contraseña de macOS desde una app con firma local.
+- [ ] 6.4 C: ventana de ajustes y `guardian configure`.
+
+Después, investigar referencias, definir qué es una experiencia "asombrosa" para el usuario, prototipar y probar. Candidatos (detalle en la [especificación de la Fase 5](docs/fases/fase-5-app-barra-de-menus.md#fuera-de-la-v1--fase-6)):
 - Interruptor en el Centro de control.
 - Ventana de configuración.
 - Estadísticas.
@@ -295,7 +301,7 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
   - **YouTube Studio:** con la sesión iniciada funciona; **iniciar sesión** falla, porque la redirección pasa por `www.youtube.com/signin`. Hosts no puede desbloquear una sola página. Se acepta: se usa un pase (el usuario lo considera un caso raro).
   - Pase: desbloqueó solo YouTube (71 de 82 dominios bloqueados) y `reconcile` volvió a bloquear 14 s después de vencer. LaunchDaemon: 57 ejecuciones en 28 min, todas con salida 0.
   - Retraso al terminar: `stop` a las 12:36:26, fin a las 12:41:39. `/etc/hosts` quedó del mismo tamaño que antes de `start`, sin bloque.
-- **Fallo nuevo, sin arreglar:** la pista de `stop` ("guardian cancel-stop") no funciona tal cual: `/usr/local/sbin` no está en el PATH y falta `sudo -n`. Anotado en la [especificación de la Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#fallos-encontrados-en-la-verificación-manual-sin-arreglar).
+- **Fallo nuevo, sin arreglar:** la pista de `stop` ("guardian cancel-stop") no funciona tal cual: `/usr/local/sbin` no está en el PATH y falta `sudo -n`. Anotado en la [especificación de la Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#fallos-encontrados-en-la-verificación-manual).
 - **Error del agente:** ejecutó `sudo -n true` (no hace nada) contra la regla de que solo el usuario ejecuta sudo. Se le avisó al usuario.
 - **Más resultados:** Gmail, Drive y Meet funcionan con el bloqueo. Los 82 dominios resuelven al bloqueo (`dscacheutil`). Pinterest redirige a `co.pinterest.com`, que ya está en la lista. LinkedIn en Thorium cargó con y sin bloqueo.
 - **Decisión del usuario:** no seguir con los checklists. Lo que falta se descubrirá con el uso; él reportará los fallos. Quedan sin probar: sesión por tiempo, reposo, arranque automático, candado y la vista previa de Studio.
@@ -311,3 +317,26 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
 - **Pedidos del usuario tras ver la app:** nada de Terminal para los ajustes, alargar y acortar una sesión por tiempo, y pases para otros sitios con fricción. **Decisiones:** D14 (para quién), D15 (contraseña al guardar) y D16 (alargar y acortar). Con eso, el borrador de la [Fase 6, primera parte](docs/fases/fase-6-ajustes-y-controles.md). No se escribió código para ella.
 - **Revisión del usuario:** llegaron las notificaciones del pase. Aceptó que acortar nunca termine antes que el retraso (D16) y los supuestos (alargar sin tope, límite de pases compartido).
 - **Siguiente:** el agente escribe A y B de la Fase 6. Siguen pendientes de 5.6: si la app se abre al iniciar sesión (mañana) y el aviso del arranque.
+
+### 2026-10-29 · Sesión 8: Fase 6, A y B (6.1)
+- **Por qué ahora:** era el siguiente paso del plan tras la revisión del usuario (sesión 7), y el usuario pidió seguir. Se apoya en el motor y la app, que ya funcionan en el Mac.
+- **Hecho:**
+  - **Motor:** `extend <min>` y `shorten <min>`, `pass [grupo]` (un grupo por pase, límite compartido), estado con `TIMED_STARTED` y `PASS_GROUP`, `status --json` con `timed_started` y `pass_group`, y la regla de sudoers con `extend`, `shorten` y `pass <grupo>`. 3 módulos nuevos (23 en total); el más largo, 93 líneas.
+  - **App:** "Alargar ▸", "Acortar ▸" y el submenú del pase con varios sitios. 3 archivos nuevos; `MenuModel.swift` (97 líneas) se dividió antes de crecer.
+  - **Arreglado de paso:** la pista de `stop` (fallo de 4.4), porque `shorten` reutiliza ese mensaje. Ahora dice `sudo /usr/local/sbin/guardian cancel-stop`.
+  - **Pruebas:** motor de 612 a 707 comprobaciones, app de 63 a 73. Se rompió el código a propósito de 28 formas en una copia: todas fallaron.
+  - **Comprobado sin sudo:** el motor nuevo lee bien el estado instalado (formato anterior), y la regla que generará el instalador pasa `visudo`. La app compila (`app/build.zsh`); no se copió a `/Applications`.
+- **Cambios respecto a la especificación** (todos en la [Fase 6](docs/fases/fase-6-ajustes-y-controles.md#cambios-al-escribir-a-y-b-2026-10-29)): `timed_started` en el JSON; `groups` queda para C; el motor también rechaza alargar y acortar durante una terminación pendiente; `pass` sin argumento sigue en la regla de sudoers.
+- **Hallazgo para el usuario:** con `PASS_GROUPS=youtube` (la configuración instalada), B no cambia nada visible. Los pases para otros sitios se notarán con C.
+- **Siguiente:** el usuario reinstala (primero el motor, luego la app) y verifica A y B.
+
+### 2026-10-29 · Sesión 8 (continuación): primera prueba de A, "Sin fin" y la regla con patrones
+- **El usuario reinstaló** el motor (14:37) y la app. La primera vez vio la app anterior: no la cerró antes de copiar, y `open` mostró la que seguía abierta (abierta desde las 13:07). Cerrada y abierta de nuevo, "Alargar" funcionó sin contraseña (`extend 25` y `extend 90` en el registro).
+- **Lo que pidió al probar:** pasar de 25 a 90 min ("Alargar" sumaba minutos) y pasar a sin fin (D16 lo dejaba fuera). Antes había preguntado si cambiar la configuración podía no exigir reinstalar.
+- **Hecho (con su visto bueno a la propuesta):**
+  - `extend <min>`: la sesión dura `<min>` en total, como `shorten`. `extend` a secas: pasa a sin fin, con los pases que llevaba; con candado se rechaza. En la app, "Alargar ▸ a 50 min / a 90 min / Sin fin".
+  - **Regla de sudoers con patrones**, sin depender de la configuración. Los patrones son las mismas constantes con las que valida el motor (`MINUTES_REGEX` pasó de `cli.zsh` a `config-check.zsh`).
+  - **Primer intento fallido:** el usuario reinstaló y la app pidió contraseña para todo (el registro de sudo: `a password is required ... COMMAND=/usr/local/sbin/guardian start 25`). La regla tenía `G start ""` y `G start ^[1-9]…$`: sudo solo lee un patrón si los argumentos **empiezan** con `^`, y `""` solo vale si va solo, así que los dos eran texto literal. `visudo` lo aceptaba porque solo mira la sintaxis. El agente, además, había leído mal el manual y escrito que la regla anterior admitía cualquier argumento: **era falso**. Comprobado en el código de sudo (`match_command.c`, `toke.l`) y corregido: `G start`, `G ^start [1-9]…$`. Nueva `tests/test-sudoers.zsh`, que imita la comparación de sudo y falla con el primer intento.
+  - **Pruebas:** motor de 707 a 778 comprobaciones, app de 73 a 75. Se rompió el código a propósito de 18 formas (5 de ellas en la regla, incluido el primer intento): todas fallaron. La app está compilada e instalada; la app no cambió con la corrección.
+- **Lección:** `visudo` aceptó una regla que no admitía nada. Para la regla de sudoers, probar qué admite (test-sudoers) y, tras instalar, `sudo -K; sudo -n G start 999` (debe responder el motor, no sudo).
+- **Siguiente:** el usuario vuelve a ejecutar `sudo ./install.sh` (la app ya está instalada) y verifica ([checklist](docs/fases/fase-6-ajustes-y-controles.md#verificación-manual-de-a-y-b-la-hace-el-usuario)).

@@ -12,6 +12,9 @@ at_minute 10
 run_guardian stop
 assert_status "sale con 0" 0 $ST "$OUT"
 assert_contains "dice hasta cuándo sigue" "El bloqueo sigue hasta las 08:15" "$OUT"
+# Fallo de 4.4: decía "guardian cancel-stop", que no está en el PATH y necesita sudo.
+assert_contains "y el comando completo para anularla" \
+  "Para seguir trabajando: sudo /usr/local/sbin/guardian cancel-stop" "$OUT"
 assert_eq "terminación en 5 min" $(( T0 + 15 * 60 )) "$(state_value STOP_AT)"
 assert_true "el bloqueo sigue" blocked youtube.com
 

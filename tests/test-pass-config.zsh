@@ -27,16 +27,40 @@ run_guardian start
 run_guardian pass
 assert_status "error" 1 $ST "$OUT"
 
-section "Varios grupos y otra duración"
+section "Varios grupos: cada pase desbloquea uno; sin elegir, el primero"
 new_case
 set_config PASS_GROUPS youtube,twitch
 set_config PASS_MINUTES 10
 run_guardian start
 run_guardian pass
 assert_false "youtube.com desbloqueado" blocked youtube.com
-assert_false "twitch.tv desbloqueado" blocked twitch.tv
-assert_true "facebook.com sigue bloqueado" blocked facebook.com
+assert_true "twitch.tv sigue bloqueado" blocked twitch.tv
 assert_eq "dura 10 min" $(( T0 + 10 * 60 )) "$(state_value PASS_UNTIL)"
+at_minute 10
+run_guardian pass twitch
+assert_status "pass twitch sale con 0" 0 $ST "$OUT"
+assert_contains "lo dice" "twitch desbloqueado hasta las 08:20. Te quedan 1 de 3." "$OUT"
+assert_false "twitch.tv desbloqueado" blocked twitch.tv
+assert_true "youtube.com bloqueado otra vez" blocked youtube.com
+assert_true "facebook.com sigue bloqueado" blocked facebook.com
+assert_eq "anota el grupo" twitch "$(state_value PASS_GROUP)"
+
+section "Un grupo fuera de PASS_GROUPS no tiene pase"
+at_minute 20
+run_guardian pass facebook
+assert_status "error" 1 $ST "$OUT"
+assert_contains "dice cuáles sí" "facebook no tiene pases (PASS_GROUPS: youtube, twitch)" "$OUT"
+assert_eq "no lo cuenta" 2 "$(state_value PASSES_USED)"
+
+section "Estado de antes de la Fase 6 con un pase en curso (sin PASS_GROUP): el primer grupo"
+new_case
+mkdir -p $CASE/data
+print -rl -- SESSION=indefinite SESSION_STARTED=$T0 BOOT_ID=boot1 PASSES_USED=1 \
+  PASS_UNTIL=$(( T0 + 5 * 60 )) > $CASE/data/state
+run_guardian reconcile
+assert_eq "PASS_GROUP=youtube" youtube "$(state_value PASS_GROUP)"
+assert_false "youtube.com sigue desbloqueado" blocked youtube.com
+assert_true "facebook.com bloqueado" blocked facebook.com
 
 section "Una sesión nueva empieza con el contador a 0"
 set_config STOP_DELAY_MINUTES 0

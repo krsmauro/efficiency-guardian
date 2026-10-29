@@ -15,11 +15,17 @@ public struct GuardianStatus: Decodable, Equatable, Sendable {
   public var session: Session
   public var sessionStarted: Int
   public var sessionEnds: Int
+  /// Cuándo empezó la parte por tiempo; acortar se mide desde aquí. Una sesión
+  /// sin fin convertida en una por tiempo conserva su `sessionStarted`.
+  public var timedStarted: Int
   public var stopAt: Int
   public var passUntil: Int
+  /// El grupo del pase en curso ("" si no hay).
+  public var passGroup: String
   public var passesUsed: Int
   public var passesMax: Int
   public var passMinutes: Int
+  /// Los grupos que admiten pase, uno por pase.
   public var passGroups: [String]
   public var stopDelayMinutes: Int
   public var timedLock: Bool

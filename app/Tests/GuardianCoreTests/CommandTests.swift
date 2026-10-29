@@ -3,14 +3,17 @@ import Testing
 
 @Suite("Comandos")
 struct CommandTests {
-  // Deben ser los de la regla de sudoers (install/sudoers.zsh), palabra por palabra.
+  // Deben caber en la regla de sudoers (install/sudoers.zsh).
   @Test("Argumentos exactos")
   func arguments() {
     #expect(GuardianCommand.start.arguments == ["start"])
     #expect(GuardianCommand.startTimed(25).arguments == ["start", "25"])
     #expect(GuardianCommand.stop.arguments == ["stop"])
     #expect(GuardianCommand.cancelStop.arguments == ["cancel-stop"])
-    #expect(GuardianCommand.pass.arguments == ["pass"])
+    #expect(GuardianCommand.pass("youtube").arguments == ["pass", "youtube"])
+    #expect(GuardianCommand.extend(50).arguments == ["extend", "50"])
+    #expect(GuardianCommand.extendEndless.arguments == ["extend"])
+    #expect(GuardianCommand.shorten(25).arguments == ["shorten", "25"])
   }
 
   @Test("sudo -n con la ruta fija del motor")
@@ -39,7 +42,7 @@ struct CommandTests {
     let outcome = CommandOutcome.interpret(
       exitCode: 1, stdout: "", stderr: "sudo: a password is required\n")
     #expect(outcome == .failure(CommandOutcome.needsPasswordMessage))
-    #expect(CommandOutcome.needsPasswordMessage.contains("TIMED_PRESETS"))
+    #expect(CommandOutcome.needsPasswordMessage.contains("sudo ./install.sh"))
   }
 
   @Test("Sin mensaje: el código de salida")

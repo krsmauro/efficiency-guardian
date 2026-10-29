@@ -37,19 +37,39 @@ struct MenuContent: View {
 
   @ViewBuilder
   private func actions(_ menu: MenuModel) -> some View {
-    if let pass = menu.pass {
-      button(pass)
+    switch menu.pass {
+    case .action(let pass): button(pass)
+    case .submenu(let pass): submenu(pass)
+    case nil: EmptyView()
     }
-    if let title = menu.newSessionTitle {
-      Menu(title) {
-        ForEach(menu.newSession) { button($0) }
-      }
+    if let newSession = menu.newSession {
+      submenu(newSession)
+    }
+    if let extend = menu.extend {
+      submenu(extend)
+    }
+    if let shorten = menu.shorten {
+      submenu(shorten)
     }
     if let stop = menu.stop {
       button(stop)
     }
     if let cancelStop = menu.cancelStop {
       button(cancelStop)
+    }
+  }
+
+  /// Un submenú desactivado se dibuja como una opción desactivada, sin flecha:
+  /// su título ya dice por qué ("Acortar: con candado hasta las 10:30").
+  @ViewBuilder
+  private func submenu(_ submenu: Submenu) -> some View {
+    if submenu.enabled {
+      Menu(submenu.title) {
+        ForEach(submenu.items) { button($0) }
+      }
+    } else {
+      Button(submenu.title) {}
+        .disabled(true)
     }
   }
 

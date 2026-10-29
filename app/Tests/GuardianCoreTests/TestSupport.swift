@@ -56,6 +56,7 @@ func timed(_ change: (inout GuardianStatus) -> Void = { _ in }) throws -> Guardi
   try indefinite {
     $0.session = .timed
     $0.sessionEnds = at(25)
+    $0.timedStarted = T0
     change(&$0)
   }
 }

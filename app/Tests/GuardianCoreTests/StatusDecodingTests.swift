@@ -10,7 +10,8 @@ struct StatusDecodingTests {
     #expect(s.session == .none)
     #expect(s.now == T0)
     #expect(s.timedPresets == [25, 50, 90])
-    #expect(s.passGroups == ["youtube"])
+    #expect(s.passGroups == ["youtube"] && s.passGroup == "")
+    #expect(s.timedStarted == 0)
     #expect(!s.blocking && s.blockedDomains == 0)
     #expect(!s.stopPending)
   }
@@ -29,8 +30,8 @@ struct StatusDecodingTests {
     let s = try fixture("timed-pass-stop")
     #expect(s.session == .timed)
     #expect(s.now == at(4))
-    #expect(s.sessionEnds == at(25))
-    #expect(s.passUntil == at(6) && s.passActive(at: s.now))
+    #expect(s.sessionEnds == at(25) && s.timedStarted == T0)
+    #expect(s.passUntil == at(6) && s.passActive(at: s.now) && s.passGroup == "youtube")
     #expect(s.stopAt == at(8) && s.stopPending && s.effectiveStopAt == at(8))
     #expect(s.passesUsed == 1 && s.passesLeft == 2)
     #expect(s.nextDeadline(after: s.now) == at(6))
@@ -38,12 +39,14 @@ struct StatusDecodingTests {
     #expect(s.nextDeadline(after: at(8)) == at(25))
   }
 
-  @Test("Candado, varios grupos y otra configuración")
+  @Test("Candado, sin fin convertida, pase del segundo grupo y otra configuración")
   func locked() throws {
     let s = try fixture("locked")
     #expect(s.timedLock && !s.autostartAtBoot)
-    #expect(s.passGroups == ["youtube", "facebook"])
+    #expect(s.passGroups == ["youtube", "facebook"] && s.passGroup == "facebook")
     #expect(s.timedPresets == [15, 45])
+    // Convertida en el minuto 10: la parte por tiempo empieza ahí, no en T0.
+    #expect(s.sessionStarted == T0 && s.timedStarted == at(10) && s.sessionEnds == at(55))
   }
 
   @Test("¿Llegó la próxima hora de fin? Contando desde la hora del motor")

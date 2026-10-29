@@ -10,7 +10,7 @@
 # inválido, el motor se niega a hacer nada hasta que se corrija.
 
 # Duraciones de las sesiones por tiempo, en minutos (cada una entre 1 y 480).
-# Si las cambias, vuelve a ejecutar el instalador: regenera la regla de sudoers.
+# Cambiarlas no exige volver a ejecutar el instalador.
 TIMED_PRESETS=25,50,90
 
 # Candado completo: yes = una sesión por tiempo no se puede terminar antes de la hora.
@@ -23,8 +23,11 @@ STOP_DELAY_MINUTES=5
 # Sesión sin fin automática al encender el Mac (termina al apagarlo).
 AUTOSTART_AT_BOOT=yes
 
-# Pases: minutos que dura cada uno (1 a 60), cuántos por sesión (0 a 20) y
-# qué grupos de blocklists/ desbloquean, separados por comas.
+# Pases: minutos que dura cada uno (1 a 60), cuántos por sesión (0 a 20, sumando
+# todos los sitios) y qué grupos de blocklists/ admiten pase, separados por
+# comas. Cada pase desbloquea uno; sin elegir, el primero de la lista.
+# Cambiar PASS_GROUPS no exige volver a ejecutar el instalador, si el grupo ya
+# está entre las listas instaladas.
 PASS_MINUTES=5
 PASS_MAX_PER_SESSION=3
 PASS_GROUPS=youtube

@@ -69,7 +69,8 @@ section "Uso incorrecto"
 new_case
 inode=$(inode_of $CASE/hosts)
 for args in '' 'rm' 'START' 'start abc' 'start 025' 'start 25 50' 'start -5' \
-            'stop now' 'pass 2' 'status --text' 'reconcile x' 'cancel_stop'; do
+            'stop now' 'pass YouTube' 'pass a b' 'pass ../x' 'extend 25 50' 'extend 025' 'shorten abc' \
+            'shorten 25 50' 'status --text' 'reconcile x' 'cancel_stop'; do
   run_guardian ${=args}
   assert_status "${(qq)args} es rechazado" 2 $ST "$OUT"
   assert_contains "${(qq)args} muestra el uso" "Uso: guardian" "$OUT"

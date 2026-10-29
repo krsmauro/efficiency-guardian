@@ -87,6 +87,8 @@ Dividir el motor en módulos (D13) significa que `guardian`, corriendo como root
 
 Los mensajes son en español. `/usr/local/sbin` no está en el `PATH` normal de macOS, así que se usa la ruta completa: `/usr/local/sbin/guardian status`.
 
+(Esta es la interfaz de la Fase 1. La actual, con sesiones, pases, alargar y acortar, está en la [Fase 4](fase-4-sesiones-y-tiempo.md#comandos).)
+
 ## Formato del bloque en `/etc/hosts`
 
 ```

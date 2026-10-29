@@ -11,8 +11,8 @@ public enum CommandOutcome: Equatable, Sendable {
 
   public static let needsPasswordMessage = """
     sudo pidió la contraseña: la regla de sudoers no permite este comando. \
-    Puede que el motor no esté instalado, o que hayas cambiado TIMED_PRESETS \
-    sin volver a ejecutar el instalador (sudo ./install.sh).
+    Puede que el motor no esté instalado, o que sea de una versión anterior \
+    a la app: vuelve a ejecutar el instalador (sudo ./install.sh).
     """
 
   public static func interpret(exitCode: Int32, stdout: String, stderr: String) -> CommandOutcome {

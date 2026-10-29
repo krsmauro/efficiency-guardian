@@ -1,7 +1,8 @@
 #!/bin/zsh -f
 # Pruebas de las partes del instalador que no necesitan root: la migración de
-# las líneas manuales antiguas, la regla de sudoers, el plist del LaunchDaemon,
-# la comprobación de permisos y que las rutas coincidan con las del motor.
+# las líneas manuales antiguas, el plist del LaunchDaemon, la comprobación de
+# permisos y que las rutas coincidan con las del motor. La regla de sudoers,
+# en test-sudoers.zsh.
 
 source ${0:A:h}/assert.zsh
 for file in lib/env.zsh lib/log.zsh lib/config.zsh lib/config-check.zsh lib/blocklist.zsh \
@@ -39,19 +40,6 @@ section "El bloque gestionado no se toca"
 hosts_with_block $'a\n' youtube.com www.youtube.com
 legacy_filter "$REPLY"
 assert_eq "ninguna línea del bloque cuenta como antigua" 0 $#LEGACY_LINES
-
-section "Regla de sudoers (desde la configuración)"
-config_load $REPO/config.default
-g=/usr/local/sbin/guardian
-assert_eq "argumentos exactos: start, cada duración, stop, cancel-stop y pass" \
-  "mauro ALL=(root) NOPASSWD: $g start, $g start 25, $g start 50, $g start 90, $g stop, $g cancel-stop, $g pass" \
-  "$(sudoers_rule mauro | grep -v '^#')"
-sudoers_rule mauro > $T_TMP/sudoers
-assert_true "visudo la acepta" visudo -c -q -f $T_TMP/sudoers
-assert_false "status y reconcile no están" grep -qE "status|reconcile" $T_TMP/sudoers
-print -r -- "TIMED_PRESETS=15,120" > $T_TMP/config
-config_load $T_TMP/config
-assert_contains "otras duraciones" "$g start, $g start 15, $g start 120, $g stop" "$(sudoers_rule mauro)"
 
 section "Plist del LaunchDaemon"
 plist=$REPO/launchd/$DAEMON_LABEL.plist

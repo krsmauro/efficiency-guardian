@@ -19,6 +19,7 @@ engine_read() {
   clock_init
   state_load
   session_init
+  session_upgrade
   session_advance
 }
 
@@ -29,7 +30,7 @@ engine_read() {
 #   PLAN_COUNT    cuántos dominios quedan bloqueados
 # Sin sesión: sin bloque, y sin leer las listas (así siempre se puede
 # desbloquear, aunque estén dañadas). Con sesión: todos los grupos, menos
-# PASS_GROUPS si hay un pase en curso.
+# el del pase en curso (PASS_GROUP).
 # Si las listas están dañadas y ya hay un bloque, se deja como está (así stop
 # y cancel-stop siguen funcionando); si no hay bloque, error: no hay qué poner.
 engine_plan() {
@@ -40,7 +41,7 @@ engine_plan() {
   PLAN_CONTENT=$HOSTS_OUTSIDE PLAN_COUNT=0
   if [[ $S[SESSION] == none ]]; then return 0; fi
 
-  if pass_active; then skip=($CFG_PASS_GROUPS); fi
+  if pass_active; then skip=($S[PASS_GROUP]); fi
   if ! blocklist_load $BLOCKLIST_DIR $skip; then
     if (( ! HOSTS_ACTIVE )); then die "no se cambió nada: corrige las listas de $BLOCKLIST_DIR"; fi
     warn "las listas de $BLOCKLIST_DIR tienen errores: el bloqueo se queda como estaba"

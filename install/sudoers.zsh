@@ -1,22 +1,33 @@
 # Paso 8 del instalador: la regla de sudoers que deja ejecutar los comandos del
-# motor sin contraseña (para Atajos y, más adelante, la app).
+# motor sin contraseña (para Atajos y la app).
 #
-# Solo argumentos exactos, sin comodines: start, start <cada duración de
-# TIMED_PRESETS>, stop, cancel-stop y pass. Con cualquier otro argumento sudo
-# pide contraseña. "status" no hace falta (se usa sin sudo) y "reconcile" solo
-# lo ejecuta el LaunchDaemon. Por eso, si cambian las duraciones, hay que volver
-# a ejecutar el instalador.
+# No depende de la configuración: cambiar TIMED_PRESETS o PASS_GROUPS no obliga
+# a volver a instalar. Cómo compara sudo (man sudoers y su código, match_command.c
+# y toke.l; verificado el 2026-10-29 tras un fallo en el Mac):
+#   - Los "argumentos" de una entrada son TODO lo que va tras la ruta, unido con
+#     espacios. "G stop" admite solo "stop", exacto.
+#   - Son un patrón (ERE) solo si EMPIEZAN con ^ y terminan con $: por eso el
+#     subcomando va dentro ("G ^start [1-9]...$"). "G start ^[1-9]...$" se lee
+#     como texto literal y no admite nada.
+# Los patrones son los mismos con los que el motor valida su línea de comandos
+# (MINUTES_REGEX y GROUP_REGEX), y después rechaza lo que no esté en la
+# configuración, que solo root puede cambiar. tests/test-sudoers.zsh imita esa
+# comparación. "status" no hace falta (se usa sin sudo) y "reconcile" solo lo
+# ejecuta el LaunchDaemon.
 # Un error de sintaxis en sudoers puede dejar sudo inutilizable, así que la
 # regla se valida dos veces con visudo y, si algo falla, se borra.
 
-# sudoers_rule usuario → imprime el contenido del archivo (usa CFG_PRESETS, de config.zsh).
+# sudoers_rule usuario → imprime el contenido del archivo.
 sudoers_rule() {
-  local preset
-  local -a commands=("$ENGINE start")
-  for preset in $CFG_PRESETS; do commands+=("$ENGINE start $preset"); done
-  commands+=("$ENGINE stop" "$ENGINE cancel-stop" "$ENGINE pass")
-  print -r -- "# Generado por efficiency-guardian (install.sh) a partir de TIMED_PRESETS."
-  print -r -- "# No editar a mano: vuelve a ejecutar el instalador."
+  local g=$ENGINE minutes=${MINUTES_REGEX#^} group=${GROUP_REGEX#^}
+  local -a commands=(
+    "$g start" "$g ^start $minutes"
+    "$g stop" "$g cancel-stop"
+    "$g pass" "$g ^pass $group"
+    "$g extend" "$g ^extend $minutes"
+    "$g ^shorten $minutes"
+  )
+  print -r -- "# Generado por efficiency-guardian (install.sh). No editar a mano: vuelve a ejecutar el instalador."
   print -r -- "$1 ALL=(root) NOPASSWD: ${(j:, :)commands}"
 }
 
@@ -41,5 +52,7 @@ install_sudoers() {
     die "sudo no aceptó la configuración completa; se quitó la regla"
   fi
   say "   $SUDOERS_FILE"
-  say "   $user puede ejecutar sin contraseña: sudo -n $ENGINE start [${(j:|:)CFG_PRESETS}] | stop | cancel-stop | pass"
+  say "   $user puede ejecutar sin contraseña: sudo -n $ENGINE start [minutos] | stop | cancel-stop"
+  say "     | pass [grupo] | extend [minutos] | shorten <minutos>"
+  say "     (el motor solo acepta las duraciones y los grupos de la configuración)"
 }

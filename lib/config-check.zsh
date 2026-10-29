@@ -49,6 +49,19 @@ config_check_pass_groups() {
   return $errors
 }
 
+# Minutos en la línea de comandos: de 1 a 3 cifras, sin ceros a la izquierda.
+# La regla de sudoers usa este mismo patrón (install/sudoers.zsh), así que lo
+# carga también el instalador.
+readonly MINUTES_REGEX='^[1-9][0-9]?[0-9]?$'
+
+# config_require_preset minutos → termina con un error si no está en TIMED_PRESETS.
+# (start, extend y shorten solo admiten esas: sudo deja pasar cualquier número.)
+config_require_preset() {
+  if (( ! ${CFG_PRESETS[(Ie)$1]} )); then
+    die "$1 min no es una duración permitida (TIMED_PRESETS: ${(j:, :)CFG_PRESETS})"
+  fi
+}
+
 # config_int_in_range valor mínimo máximo → 0 si es un entero sin ceros a la izquierda y en el rango.
 config_int_in_range() {
   if [[ ! $1 =~ '^(0|[1-9][0-9]{0,3})$' ]]; then return 1; fi

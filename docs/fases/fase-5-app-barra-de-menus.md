@@ -31,11 +31,11 @@ Si hay varias cosas a la vez, manda la primera de la tabla:
 ### Menú al hacer clic
 
 1. **Resumen** (líneas sin acción): tipo de sesión y hora de fin, terminación pendiente, pase en curso, "Pases usados: 1 de 3" y cuántos dominios bloquea hosts ahora.
-2. **Pase YouTube, 5 min (quedan 2):** desactivado y con el motivo si no hay sesión, si ya hay un pase en curso o si no quedan. Se oculta con `PASS_MAX_PER_SESSION=0`.
-3. **Nueva sesión ▸** cada valor de `TIMED_PRESETS` y "Sin fin", solo sin sesión. **Con una sesión indefinida, el submenú se llama "Pasar a sesión por tiempo ▸"** y ofrece solo las duraciones (S2 de la Fase 4). Si una duración es menor que el retraso al terminar, el motor la alarga, y el texto lo dice: "3 min (serán 5: el retraso al terminar)". Con una sesión por tiempo no aparece.
+2. **Pase YouTube, 5 min (quedan 2):** desactivado y con el motivo si no hay sesión, si ya hay un pase en curso o si no quedan. Se oculta con `PASS_MAX_PER_SESSION=0`. **(Fase 6)** Con varios sitios en `PASS_GROUPS`, es un submenú: "Pase, 5 min (quedan 2) ▸ YouTube / Reddit".
+3. **Nueva sesión ▸** cada valor de `TIMED_PRESETS` y "Sin fin", solo sin sesión. **Con una sesión indefinida, el submenú se llama "Pasar a sesión por tiempo ▸"** y ofrece solo las duraciones (S2 de la Fase 4). Si una duración es menor que el retraso al terminar, el motor la alarga, y el texto lo dice: "3 min (serán 5: el retraso al terminar)". Con una sesión por tiempo no aparece; **(Fase 6)** en su lugar aparecen **"Alargar ▸"** y **"Acortar ▸"** (salvo durante una terminación pendiente). Detalle en la [Fase 6](fase-6-ajustes-y-controles.md#cambios-al-escribir-a-y-b-2026-10-29).
 4. **Terminar sesión (en 5 min):** si la sesión por tiempo acaba antes que el retraso, dice "Terminar sesión (ya termina a las 10:30)". Con candado aparece desactivado: "Terminar: con candado hasta las 10:30". Durante una terminación pendiente se sustituye por:
 5. **Seguir trabajando**, que llama a `cancel-stop`.
-6. **Configuración ▸** (solo lectura): los valores actuales y cómo cambiarlos (`sudo nano …` y volver a ejecutar el instalador si cambian las duraciones).
+6. **Configuración ▸** (solo lectura): los valores actuales y cómo cambiarlos (`sudo nano …`). **(Fase 6, 2026-10-29)** Ya no hace falta volver a ejecutar el instalador si cambian las duraciones o los grupos.
 7. **Abrir al iniciar sesión** (casilla). **(cambio)** El borrador no la tenía: la app se registra sola la primera vez que se abre **desde /Applications**, y la casilla permite quitarlo.
 8. **Salir.**
 
@@ -43,7 +43,7 @@ Si hay varias cosas a la vez, manda la primera de la tabla:
 
 **Mientras un comando está en marcha** las acciones se desactivan, para que un doble clic no lance dos.
 
-**(cambio) Si un comando falla,** una alerta muestra el mensaje del motor, después de volver a leer el estado (por ejemplo, "No quedan pases en esta sesión (3/3)"). Si sudo pide contraseña, explica que la regla de sudoers no permite ese comando: o el motor no está instalado, o cambió `TIMED_PRESETS` sin volver a ejecutar el instalador. El borrador no decía cómo mostrar los errores; una notificación podía estar desactivada, y una alerta no necesita permiso. La alerta se abre desde el run loop (`RunLoop.main.perform`) y no dentro de la tarea que ejecutó el comando: si no, mientras está abierta se congelan las lecturas del estado (fallo 1 de la revisión).
+**(cambio) Si un comando falla,** una alerta muestra el mensaje del motor, después de volver a leer el estado (por ejemplo, "No quedan pases en esta sesión (3/3)"). Si sudo pide contraseña, explica que la regla de sudoers no permite ese comando: o el motor no está instalado, o es de una versión anterior a la app (desde la Fase 6, cambiar `TIMED_PRESETS` o `PASS_GROUPS` ya no la cambia). El borrador no decía cómo mostrar los errores; una notificación podía estar desactivada, y una alerta no necesita permiso. La alerta se abre desde el run loop (`RunLoop.main.perform`) y no dentro de la tarea que ejecutó el comando: si no, mientras está abierta se congelan las lecturas del estado (fallo 1 de la revisión).
 
 ### Notificaciones
 
@@ -95,7 +95,7 @@ La app se registra como ítem de inicio la primera vez que se abre **desde `/App
 
 ## Archivos
 
-La lógica que decide qué se muestra no toca el sistema y se prueba sola; la parte que habla con macOS es delgada. El archivo más largo tiene 97 líneas.
+La lógica que decide qué se muestra no toca el sistema y se prueba sola; la parte que habla con macOS es delgada. El archivo más largo tiene 93 líneas (`AppModel.swift`; hasta la Fase 6 era `MenuModel.swift`, con 97, que se dividió).
 
 **`GuardianCore`** (biblioteca, sin interfaz; con pruebas):
 
@@ -103,7 +103,7 @@ La lógica que decide qué se muestra no toca el sistema y se prueba sola; la pa
 |---|---|
 | `GuardianStatus.swift` | El JSON de `status --json`, decodificado y validado; horas efectivas de fin |
 | `StatusResult.swift` | Interpretar la salida de `status`: estado, motor no instalado o error |
-| `GuardianCommand.swift` | Los comandos y sus argumentos exactos (los de la regla de sudoers) |
+| `GuardianCommand.swift` | Los comandos y sus argumentos (deben caber en la regla de sudoers) |
 | `CommandOutcome.swift` | Interpretar la salida de un comando: mensaje del motor, o el error explicado |
 | `EngineMessage.swift` | Quitar el prefijo `guardian: error:` a los mensajes del motor |
 | `ProcessRunner.swift` | Ejecutar un programa y leer su salida. **(cambio)** Estaba en la app; se movió aquí para probarlo con programas de verdad. Es lo único de la biblioteca que toca el sistema. |
@@ -111,6 +111,9 @@ La lógica que decide qué se muestra no toca el sistema y se prueba sola; la pa
 | `GroupNames.swift` | `youtube` → "YouTube" |
 | `IconState.swift` | Qué ícono y qué texto lleva la barra de menús |
 | `MenuModel.swift` | Qué opciones tiene el menú, activas o no, con su texto |
+| `MenuAction.swift` | **(Fase 6)** Opción, submenú, y "opción o submenú" (el pase) |
+| `PassMenu.swift` | **(Fase 6)** El pase: una opción con un sitio, un submenú con varios |
+| `SessionLengthMenu.swift` | **(Fase 6)** "Alargar ▸" y "Acortar ▸" |
 | `MenuSummary.swift` | Las líneas de resumen y de configuración del menú |
 | `MenuSnapshot.swift` | Todo lo que dibuja el menú, ya en texto. La app solo lo redibuja si cambia (fallo de 5.6) |
 | `NotificationPlanner.swift` | Qué notificaciones enviar al cambiar el estado o pasar el tiempo |
@@ -134,8 +137,8 @@ La lógica que decide qué se muestra no toca el sistema y se prueba sola; la pa
 
 ## Pruebas
 
-- **`swift test --package-path app`** prueba `GuardianCore` (Swift Testing, 63 pruebas, menos de 1 s). `app/build.zsh` las ejecuta antes de compilar y se niega a seguir si fallan. **No forman parte de `tests/run.zsh`**: el instalador ejecuta esas pruebas antes de instalar el motor, y no debe depender de compilar Swift.
-- **Con el motor de verdad:** `EngineIntegrationTests.swift` ejecuta el `bin/guardian` del repositorio sin root sobre un hosts temporal (como `tests/e2e.zsh`) y comprueba que los comandos de la app, sus argumentos y su forma de leer las respuestas encajan con el motor. Lo único que no prueba es la ruta instalada con `sudo -n`.
+- **`swift test --package-path app`** prueba `GuardianCore` (Swift Testing, 75 pruebas desde la Fase 6, menos de 1 s). `app/build.zsh` las ejecuta antes de compilar y se niega a seguir si fallan. **No forman parte de `tests/run.zsh`**: el instalador ejecuta esas pruebas antes de instalar el motor, y no debe depender de compilar Swift.
+- **Con el motor de verdad:** `EngineIntegrationTests.swift` (con `EngineSandbox.swift`) ejecuta el `bin/guardian` del repositorio sin root sobre un hosts temporal (como `tests/e2e.zsh`) y comprueba que los comandos de la app, sus argumentos y su forma de leer las respuestas encajan con el motor. Lo único que no prueba es la ruta instalada con `sudo -n`.
 - **¿Detectan errores?** Se rompió el código a propósito de 24 formas en una copia (18 al escribirlo y 6 volviendo a meter los fallos de la revisión): todas fallaron. Tres (en `ProcessRunner`) se detectan porque las pruebas **se cuelgan**, no porque fallen: es la naturaleza de ese fallo.
 - **Sin pruebas automáticas:** la parte de la app que habla con macOS (`GuardianBar`: vistas, alertas, ítem de inicio, notificaciones, temporizador). Solo se comprobó que la app arranca y sigue viva 5 s sin el motor instalado (binario suelto, sin registrar nada en el Mac).
 
@@ -197,7 +200,7 @@ La primera parte de la Fase 6 ya tiene borrador ([fase-6-ajustes-y-controles.md]
 - [ ] La app se abre sola al iniciar sesión. **¿Funciona `SMAppService.mainApp` con la firma local?** (sin verificar; si no, añadirla a mano en Ajustes → General → Ítems de inicio)
 - [ ] Tras reiniciar el Mac con `AUTOSTART_AT_BOOT=yes`, el ícono muestra la sesión indefinida y llega el aviso "Modo enfoque activado al encender el Mac".
 - [ ] Con el menú abierto, la cuenta atrás sigue avanzando.
-- [ ] Error explicado: cambiar `TIMED_PRESETS` sin volver a ejecutar el instalador → elegir la duración nueva → la alerta dice que la regla de sudoers no la permite.
+- [ ] ~~Error explicado: cambiar `TIMED_PRESETS` sin volver a ejecutar el instalador → la alerta dice que la regla de sudoers no la permite.~~ **Ya no aplica (Fase 6, 2026-10-29):** la regla no depende de la configuración. Esa alerta solo sale con un motor anterior a la app.
 - [ ] **Fallo 1 de la revisión:** con esa alerta abierta, activar o desactivar la Concentración (o esperar a que venza un pase): el ícono cambia aunque la alerta siga abierta.
 - [ ] La alerta aparece delante, no detrás de otras ventanas (`NSApp.activate()` en una app sin Dock; sin verificar).
 - [ ] **Fallo 4 de la revisión:** abrir la app desde `app/build` no la registra al iniciar sesión; desde `/Applications`, sí. Quitar el ítem en Ajustes → General → Ítems de inicio y abrir el menú: la casilla aparece desmarcada.

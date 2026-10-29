@@ -62,7 +62,7 @@ struct MenuSummaryTests {
       "Candado en sesiones por tiempo: sí",
       "Retraso al terminar: 5 min",
       "Sesión sin fin al encender el Mac: no",
-      "Pases: 3 por sesión, de 5 min (YouTube y Facebook)",
+      "Pases: 3 por sesión, de 5 min, uno a la vez (YouTube y Facebook)",
     ])
     #expect(MenuSummary.howToChange.first?.contains("/usr/local/etc/efficiency-guardian/config") == true)
   }

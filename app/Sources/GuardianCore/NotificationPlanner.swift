@@ -38,10 +38,8 @@ public struct NotificationPlanner: Sendable {
       return sessionEnded(old, now: now).map { [$0] } ?? []
     }
     if old.passUntil > 0 && new.passUntil == 0 && Self.isRecent(old.passUntil, now) {
-      let groups = GroupNames.list(old.passGroups)
-      let verb = old.passGroups.count > 1 ? "vuelven" : "vuelve"
       return [AppNotification(id: "pass-ended", title: "Pase terminado",
-                              body: "\(groups) \(verb) a bloquearse en unos segundos.")]
+                              body: "\(GroupNames.display(old.passGroup)) vuelve a bloquearse en unos segundos.")]
     }
     return []
   }
@@ -66,10 +64,8 @@ public struct NotificationPlanner: Sendable {
     let left = status.passUntil - now
     guard status.passMinutes > 1, left > 0, left <= 60, warnedPassUntil != status.passUntil else { return nil }
     warnedPassUntil = status.passUntil
-    let groups = GroupNames.list(status.passGroups)
-    let verb = status.passGroups.count > 1 ? "vuelven" : "vuelve"
     return AppNotification(id: "pass-warning", title: "Queda 1 minuto de pase",
-                           body: "Después, \(groups) \(verb) a bloquearse.")
+                           body: "Después, \(GroupNames.display(status.passGroup)) vuelve a bloquearse.")
   }
 
   /// Una vez por arranque (también si la app se cierra y se vuelve a abrir): la

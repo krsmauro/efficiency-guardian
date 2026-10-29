@@ -13,11 +13,11 @@ assert_eq "sin sesión" none "$S[SESSION]"
 assert_eq "contador a 0" 0 "$S[PASSES_USED]"
 
 section "Guardar y volver a leer"
-S[SESSION]=timed S[SESSION_STARTED]=100 S[SESSION_ENDS]=1600 S[BOOT_ID]=ABC-123
-S[STOP_AT]=400 S[PASSES_USED]=2 S[PASS_UNTIL]=300
+S[SESSION]=timed S[SESSION_STARTED]=100 S[SESSION_ENDS]=1600 S[TIMED_STARTED]=200 S[BOOT_ID]=ABC-123
+S[STOP_AT]=400 S[PASSES_USED]=2 S[PASS_UNTIL]=300 S[PASS_GROUP]=youtube
 state_save
 assert_eq "formato: una clave por línea, siempre en el mismo orden" \
-  $'SESSION=timed\nSESSION_STARTED=100\nSESSION_ENDS=1600\nBOOT_ID=ABC-123\nSTOP_AT=400\nPASSES_USED=2\nPASS_UNTIL=300' \
+  $'SESSION=timed\nSESSION_STARTED=100\nSESSION_ENDS=1600\nTIMED_STARTED=200\nBOOT_ID=ABC-123\nSTOP_AT=400\nPASSES_USED=2\nPASS_UNTIL=300\nPASS_GROUP=youtube' \
   "$(cat $file)"
 assert_eq "legible por todos (644)" 644 "$(mode_of $file)"
 assert_eq "la carpeta también (755)" 755 "$(mode_of $T_TMP/data)"
@@ -45,12 +45,13 @@ print -r -- "SESSION=indefinite" > $file
 state_load
 assert_eq "válido" 1 $STATE_EXISTS
 assert_eq "la que está" indefinite "$S[SESSION]"
-assert_eq "las que faltan" "0 0" "$S[STOP_AT] $S[PASS_UNTIL]"
+assert_eq "las que faltan" "0 0 0 ''" "$S[STOP_AT] $S[PASS_UNTIL] $S[TIMED_STARTED] ${(qq)S[PASS_GROUP]}"
 
 section "Estado dañado: aviso, y se empieza de nuevo sin ejecutar nada"
 for bad in 'SESSION=otra' 'STOP_AT=abc' 'STOP_AT=-1' 'STOP_AT=01' 'PASSES_USED=1 2' \
            "STOP_AT=\$(touch $T_TMP/pwned)" "STOP_AT=a[\$(touch $T_TMP/pwned)]" \
-           'BOOT_ID=a b' 'BOOT_ID=' 'COSA=1' 'sin igual'; do
+           'BOOT_ID=a b' 'BOOT_ID=' 'COSA=1' 'sin igual' 'TIMED_STARTED=x' \
+           'PASS_GROUP=YouTube' 'PASS_GROUP=../x' 'PASS_GROUP=a b' 'PASS_GROUP="x"'; do
   print -rl -- 'SESSION=indefinite' "$bad" > $file
   OUT=$(state_load 2>&1)
   assert_contains "avisa con ${(qq)bad}" "estado dañado" "$OUT"

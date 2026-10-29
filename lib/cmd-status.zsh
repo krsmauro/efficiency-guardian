@@ -34,7 +34,7 @@ status_text() {
   fi
   if pass_active; then
     hhmm $S[PASS_UNTIL]
-    say "Pase en curso: ${(j:, :)CFG_PASS_GROUPS}, hasta las $REPLY"
+    say "Pase en curso: $S[PASS_GROUP], hasta las $REPLY"
   fi
   if [[ $S[SESSION] != none ]]; then
     say "Pases usados: $S[PASSES_USED] de $CFG[PASS_MAX_PER_SESSION]"

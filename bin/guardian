@@ -1,7 +1,8 @@
 #!/bin/zsh -f
 # efficiency-guardian: punto de entrada del motor de bloqueo.
 #
-# Uso: guardian start [minutos] | stop | cancel-stop | pass | status [--json] | reconcile
+# Uso: guardian start [minutos] | stop | cancel-stop | pass [grupo] | extend <minutos>
+#              | shorten <minutos> | status [--json] | reconcile
 #
 # Este archivo solo prepara un entorno seguro, carga los módulos de lib/ y
 # despacha el subcomando. La lógica vive en los módulos.
@@ -26,8 +27,9 @@ umask 022
 readonly INSTALLED_LIB=/usr/local/libexec/efficiency-guardian/lib
 readonly INSTALLED_ETC=/usr/local/etc/efficiency-guardian
 readonly MODULES=(
-  env log clock config config-check state lock blocklist hosts-block hosts-write session engine
-  cmd-start cmd-stop cmd-cancel-stop cmd-pass cmd-reconcile cmd-status status-json cli
+  env log clock config config-check state lock blocklist hosts-block hosts-write session session-ending
+  engine cmd-start cmd-stop cmd-cancel-stop cmd-pass cmd-extend cmd-shorten cmd-reconcile cmd-status
+  status-json cli
 )
 
 # Error antes de tener log.zsh cargado. Siendo root también va al registro: el

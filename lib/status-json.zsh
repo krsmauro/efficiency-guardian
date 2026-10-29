@@ -2,8 +2,10 @@
 #
 # Las horas son epoch (segundos desde 1970); 0 significa "no hay". "now" es la
 # hora del motor. "blocking" y "blocked_domains" son lo que hay en hosts ahora.
-# Todos los valores son números, true/false o textos ya validados (el tipo de
-# sesión y los nombres de grupo), así que no hace falta escapar nada.
+# "pass_groups" son los grupos que admiten pase; "pass_group", el del pase en
+# curso ("" si no hay). Todos los valores son números, true/false o textos ya
+# validados (el tipo de sesión y los nombres de grupo), así que no hace falta
+# escapar nada.
 
 status_json() {
   local -a groups=(\"${^CFG_PASS_GROUPS}\")
@@ -12,8 +14,10 @@ status_json() {
   print -r -- "  \"session\": \"$S[SESSION]\","
   print -r -- "  \"session_started\": $S[SESSION_STARTED],"
   print -r -- "  \"session_ends\": $S[SESSION_ENDS],"
+  print -r -- "  \"timed_started\": $S[TIMED_STARTED],"
   print -r -- "  \"stop_at\": $S[STOP_AT],"
   print -r -- "  \"pass_until\": $S[PASS_UNTIL],"
+  print -r -- "  \"pass_group\": \"$S[PASS_GROUP]\","
   print -r -- "  \"passes_used\": $S[PASSES_USED],"
   print -r -- "  \"passes_max\": $CFG[PASS_MAX_PER_SESSION],"
   print -r -- "  \"pass_minutes\": $CFG[PASS_MINUTES],"
