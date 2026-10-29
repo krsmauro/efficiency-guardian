@@ -8,7 +8,8 @@ source ${0:A:h}/assert.zsh
 
 section "Sintaxis"
 for file in $REPO/bin/guardian $REPO/lib/*.zsh $REPO/install.sh $REPO/uninstall.sh \
-            $REPO/install/*.zsh $REPO/close-tabs/*.zsh $REPO/tools/*.zsh(N) $REPO/tests/*.zsh; do
+            $REPO/install/*.zsh $REPO/close-tabs/*.zsh $REPO/tools/*.zsh(N) $REPO/tests/*.zsh \
+            $REPO/app/*.zsh(N); do
   assert_true "${file#$REPO/}" zsh -n $file
 done
 for file in $REPO/close-tabs/*.js $REPO/tests/*.js; do

@@ -20,13 +20,17 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 
 ## Estado actual
 
+- **Regla del usuario (2026-10-29): no escribir más código hasta que el usuario haga las pruebas manuales** (1.5, 1.6, 4.4, 3.1 y 5.6). Si un agente encuentra un fallo antes, **lo documenta** (en la especificación de su fase y en la bitácora) para que otro agente lo arregle después, cuando el usuario lo pida. No lo arregla.
 - **Fases 1 y 4: código terminado** (pasos 1.1 a 1.4 y 4.0 a 4.3). El instalador instala las dos juntas. Faltan los pasos del usuario: 1.5 (instalar), 1.6 y 4.4 (verificación manual).
+- **Fase 5: código terminado** (5.1 a 5.4): la app de barra de menús en `app/`. Compila y sus pruebas pasan, pero **nunca ha hablado con el motor instalado**. Una revisión encontró 6 fallos, arreglados pero dos de ellos **sin probar** ([lista](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-revisión-2026-10-29-arreglados-sin-probar-a-mano)). Faltan 5.5 (decidir si absorbe la Fase 3) y la verificación del usuario (5.6).
 - **Fase 3: script escrito y probado sin navegadores** (3.2 y la mitad de 3.3). **No lo instala todavía el instalador:** quién lo ejecuta cada 15 s depende de la prueba de permisos 3.1.
-- **Siguientes pasos: el usuario**, en cualquier orden (son independientes):
+- **Siguientes pasos: el usuario.** Ya no queda trabajo del agente que no dependa de ellos:
   - **El más importante:** revisar los scripts y ejecutar `sudo ./install.sh` (1.5). Luego, la verificación manual de la [Fase 1](docs/fases/fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario) (1.6, con la nota sobre el retraso de `stop`) y la de la [Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#verificación-manual-tras-instalar-44-la-hace-el-usuario) (4.4). Todo lo demás se apoya en el motor, que aún no se ha probado en el sistema real.
-  - La prueba de permisos de la Fase 3 (3.1), sin sudo: `zsh tools/try-close-tabs.zsh terminal` y luego `agent` ([instrucciones](docs/fases/fase-3-cerrar-pestanas.md#cómo-hacer-la-prueba-toolstry-close-tabszsh-sin-sudo)). Anotar a nombre de quién pide macOS el permiso.
-- **Después, el agente:** con el resultado de 3.1, el disparador de la Fase 3 (LaunchAgent + instalador, o la alternativa). O la Fase 2 (manual, guiada).
-- **Código escrito:** motor `bin/guardian` + 20 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, `close-tabs/` (Fase 3, 4 archivos), `tools/try-close-tabs.zsh`, y 597 comprobaciones en `tests/` (`zsh tests/run.zsh`, todas pasan). **Nada instalado todavía:** `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
+  - **Con el motor instalado:** compilar e instalar la app (`zsh app/build.zsh` y copiarla a `/Applications`, sin sudo; [instrucciones](docs/fases/fase-5-app-barra-de-menus.md#compilar-e-instalar-lo-hace-el-usuario-sin-sudo)) y hacer su [verificación](docs/fases/fase-5-app-barra-de-menus.md#verificación-manual-56-la-hace-el-usuario-con-el-motor-instalado) (5.6).
+  - La prueba de permisos de la Fase 3 (3.1), sin sudo y en cualquier momento: `zsh tools/try-close-tabs.zsh terminal` y luego `agent` ([instrucciones](docs/fases/fase-3-cerrar-pestanas.md#cómo-hacer-la-prueba-toolstry-close-tabszsh-sin-sudo)). Anotar a nombre de quién pide macOS el permiso.
+- **Después, el agente (solo cuando el usuario lo pida, tras sus pruebas):** con el resultado de 3.1, decidir 5.5 (¿cierra las pestañas la app o un LaunchAgent?) y escribir el disparador de la Fase 3. Con los resultados de 1.6, 4.4 y 5.6, corregir lo que falle. O guiar la Fase 2 (manual).
+- **Código escrito:** motor `bin/guardian` + 20 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, `close-tabs/` (Fase 3, 4 archivos), `tools/try-close-tabs.zsh`, y la app en `app/` (Fase 5: 24 archivos de Swift, `Package.swift` y `build.zsh`).
+- **Pruebas:** 607 comprobaciones en `tests/` (`zsh tests/run.zsh`) y 59 de la app (`swift test --package-path app`). Todas pasan. **Nada instalado todavía:** `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
 - **Última actualización:** 2026-10-29.
 
 ## Cómo usar este plan (agentes)
@@ -84,7 +88,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 | 2 | Concentración + Atajos como interruptor | ✅ [lista](docs/fases/fase-2-interruptor.md) (manual, guiada) |
 | 3 | Cerrar las pestañas abiertas de sitios bloqueados | 🔨 [script escrito](docs/fases/fase-3-cerrar-pestanas.md) (falta la prueba de permisos 3.1 y el disparador) |
 | 4 | Sesiones por tiempo e indefinidas, retraso al terminar, arranque automático, pases | ✅ [código escrito](docs/fases/fase-4-sesiones-y-tiempo.md) (falta 4.4) |
-| 5 | App de barra de menús en Swift (v1) | 📝 [borrador](docs/fases/fase-5-app-barra-de-menus.md) |
+| 5 | App de barra de menús en Swift (v1) | ✅ [código escrito](docs/fases/fase-5-app-barra-de-menus.md) (falta 5.5 y la verificación 5.6) |
 | 6 | Investigar y pulir la experiencia de usuario | ⏳ se escribe al llegar |
 
 ### Fase 1: motor de bloqueo
@@ -114,12 +118,12 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 - [ ] 4.5 Tras 1–2 semanas de uso, revisar los registros y ajustar los valores por defecto.
 
 ### Fase 5: app de barra de menús (v1)
-- [ ] 5.1 Proyecto Xcode en `app/` con `MenuBarExtra` (sin sandbox, `LSUIElement`).
-- [ ] 5.2 Leer el estado y mostrarlo en el ícono y el menú.
-- [ ] 5.3 Acciones mediante `sudo -n guardian …`.
-- [ ] 5.4 Notificaciones y apertura al iniciar sesión.
-- [ ] 5.5 Decidir si la app absorbe la Fase 3.
-- [ ] 5.6 Verificación manual.
+- [x] 5.1 Paquete de Swift en `app/` con `MenuBarExtra` (sin sandbox, `LSUIElement`). **(cambio)** No es un proyecto de Xcode: así todo es texto revisable y se compila y prueba desde la Terminal.
+- [x] 5.2 Leer el estado y mostrarlo en el ícono y el menú.
+- [x] 5.3 Acciones mediante `sudo -n guardian …`.
+- [x] 5.4 Notificaciones y apertura al iniciar sesión.
+- [ ] 5.5 Decidir si la app absorbe la Fase 3 (con el resultado de 3.1).
+- [ ] 5.6 **Usuario:** compilar, instalar y verificar a mano (checklist en la especificación).
 
 ### Fase 6: experiencia de usuario
 Investigar referencias, definir qué es una experiencia "asombrosa" para el usuario, prototipar y probar. Candidatos (detalle en la [especificación de la Fase 5](docs/fases/fase-5-app-barra-de-menus.md#fuera-de-la-v1--fase-6)):
@@ -143,7 +147,8 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
 - ¿Existe la opción "Alternar" en la acción "Definir Concentración" en el Mac? (Fase 2)
 - ¿Un LaunchAgent con `osascript` obtiene permiso de Automatización, o falla en silencio? (Fase 3)
 - ¿launchd ejecuta `reconcile` en cuanto el Mac despierta? (Fase 4)
-- ¿Funciona `SMAppService.mainApp` (abrir al iniciar sesión) con la firma local o gratuita? (Fase 5)
+- ¿Funciona `SMAppService.mainApp` (abrir al iniciar sesión) con la firma local (ad-hoc)? (Fase 5, en 5.6)
+- ¿Llegan las notificaciones de una app con firma local? (Fase 5, en 5.6)
 
 ## Bitácora
 
@@ -251,5 +256,24 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
   - Propuesta: el LaunchAgent en `/Library/LaunchAgents` (de root), no en `~/Library`.
 - **Hallazgos:**
   - **Trampa de zsh nueva:** `zsh -n` (solo revisar la sintaxis) **sí lee** los archivos de `"$(<archivo)"` cuando van como argumento de un comando (no en una asignación). Hizo fallar `test-syntax.zsh` con un archivo que no existía en ese momento. Solución: leerlos antes en una variable.
+    - **Corregido el 2026-10-29 (sesión 5):** también los lee dentro de un arreglo (`a=(-e "$(<f)")`); solo una variable suelta es segura. Por eso `test-syntax.zsh` mostraba "no such file or directory: /match.js" (sin fallar). Arreglado en `close-tabs.zsh`.
   - **Trampa de zsh conocida, otra vez:** un patrón sin coincidencias (`rm $F/out-*`) aborta el comando entero. Se usa `(N)`.
   - En la [especificación](docs/fases/fase-3-cerrar-pestanas.md#riesgos-a-verificar-primero-31-prueba-de-permisos-la-hace-el-usuario) se anota una consecuencia de seguridad a vigilar en 3.1: si el permiso queda a nombre de `osascript` o `zsh` en general, otros scripts en segundo plano también podrían controlar el navegador.
+
+### 2026-10-29 · Sesión 5: Fase 5, la app de barra de menús (5.1 a 5.4)
+- **Por qué la Fase 5:** lo siguiente del plan era del usuario (instalar, 1.5). La app era el único trabajo del agente que no dependía de eso: habla con el motor solo por `status --json` y cinco comandos exactos, ya probados. **Riesgo aceptado:** si al instalar el motor algo cambia, la app puede necesitar cambios.
+- **Hecho:**
+  - Especificación de la Fase 5 lista (era un borrador), con los cambios marcados.
+  - `app/`: paquete de Swift con `GuardianCore` (lógica con pruebas) y `GuardianBar` (la app). 24 archivos de Swift; el más largo, 97 líneas. `app/build.zsh` ejecuta las pruebas, compila y firma `EfficiencyGuardian.app` sin instalar nada.
+  - Pruebas: 59 de Swift (`swift test --package-path app`), incluidas unas que ejecutan el motor del repositorio sin root. En `tests/`, `test-app-contract.zsh` comprueba que el JSON del motor coincide con los archivos que leen las pruebas de Swift (de 597 a 607 comprobaciones).
+  - Se rompió el código a propósito de 24 formas en una copia: todas fallaron.
+  - La app arranca y sigue viva 5 s sin el motor (binario suelto; no se registró nada en el Mac).
+- **Cambios respecto al borrador** (marcados en la especificación): paquete de Swift en vez de proyecto de Xcode (texto revisable, se prueba desde la Terminal); errores en una alerta; casilla "Abrir al iniciar sesión"; solo se avisa de lo que acaba de pasar.
+- **Hallazgos:**
+  - **Bloquear un hilo dentro de async/await cuelga todo:** esos hilos son tantos como núcleos (10). `ProcessRunner` esperaba ahí a los programas; las pruebas en paralelo a veces se colgaban. Ahora usa hilos propios. Anotado en [entorno.md](docs/entorno.md).
+  - `timeout` no existe en macOS; se usa `perl -e 'alarm N; exec @ARGV'`.
+  - Corrección a la sesión 4 sobre `zsh -n` (arriba), con su arreglo en `close-tabs.zsh` (2 líneas).
+- **Revisión independiente:** 1 fallo medio y 5 leves, **arreglados antes de que el usuario pidiera parar**. Dos arreglos (la alerta y el ítem de inicio) no se pueden probar sin la interfaz: van al checklist de 5.6. [Lista completa](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-revisión-2026-10-29-arreglados-sin-probar-a-mano).
+- **Lo que la revisión no pudo verificar** (añadido a 5.6): cómo se dibuja el ícono, si el menú se actualiza abierto, si la alerta sale delante, App Nap, notificaciones e ítem de inicio con firma local.
+- **Error del agente:** el usuario preguntó si ya solo quedaba la evaluación humana, y el agente siguió arreglando los fallos de la revisión. De ahí la regla de arriba.
+- **Siguiente:** el usuario instala y verifica (1.5, 1.6, 4.4), luego la app (5.6). La prueba 3.1, cuando quiera.

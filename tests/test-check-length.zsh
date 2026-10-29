@@ -5,7 +5,7 @@
 source ${0:A:h}/assert.zsh
 
 fake=$T_TMP/repo
-mkdir -p $fake/{bin,lib,close-tabs,tools,install,tests/fixtures/sub,blocklists}
+mkdir -p $fake/{bin,lib,close-tabs,tools,install,tests/fixtures/sub,blocklists,app/Sources/X,app/Tests/X/Fixtures}
 
 # make_file ruta número_de_líneas
 make_file() {
@@ -41,14 +41,15 @@ make_file lib/a.zsh 10
 
 section "Qué cuenta como código"
 for code_file in bin/guardian install.sh install/x.zsh uninstall.sh tests/test-x.zsh \
-                 close-tabs/x.js close-tabs/x.zsh tools/x.zsh; do
+                 close-tabs/x.js close-tabs/x.zsh tools/x.zsh app/Sources/X/x.swift app/build.zsh; do
   make_file $code_file 150
   check
   assert_status "$code_file cuenta como código" 1 $ST "$OUT"
   rm $fake/$code_file
 done
 
-for data_file in blocklists/youtube.txt tests/fixtures/hosts tests/fixtures/sub/big lib/notas.md; do
+for data_file in blocklists/youtube.txt tests/fixtures/hosts tests/fixtures/sub/big lib/notas.md \
+                 app/Info.plist app/Tests/X/Fixtures/status.json; do
   make_file $data_file 500
   check
   assert_status "$data_file no cuenta (datos o documentación)" 0 $ST "$OUT"

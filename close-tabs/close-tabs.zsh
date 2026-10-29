@@ -61,7 +61,9 @@ if ! hosts_parse "$content"; then report err "$HOSTS_ERROR"; exit 1; fi
 if (( $#HOSTS_DOMAINS == 0 )); then exit 0; fi
 
 # 2. Cada navegador abierto. Los .js se leen una vez y se pasan con -e.
-scripts=(-e "$(<$HERE/match.js)" -e "$(<$HERE/browser.js)" -e "$(<$HERE/run.js)")
+# (Primero en variables sueltas: "zsh -n" lee los $(<archivo) dentro de un arreglo.)
+match_js=$(<$HERE/match.js) browser_js=$(<$HERE/browser.js) run_js=$(<$HERE/run.js)
+scripts=(-e "$match_js" -e "$browser_js" -e "$run_js")
 failed=0
 for bundle in $BROWSERS; do
   name=$NAMES[$bundle]

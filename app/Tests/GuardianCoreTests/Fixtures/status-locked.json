@@ -1,0 +1,18 @@
+{
+  "now": 1800000000,
+  "session": "timed",
+  "session_started": 1800000000,
+  "session_ends": 1800002700,
+  "stop_at": 0,
+  "pass_until": 0,
+  "passes_used": 0,
+  "passes_max": 3,
+  "pass_minutes": 5,
+  "pass_groups": ["youtube", "facebook"],
+  "stop_delay_minutes": 5,
+  "timed_lock": true,
+  "timed_presets": [15, 45],
+  "autostart_at_boot": false,
+  "blocking": true,
+  "blocked_domains": 3
+}

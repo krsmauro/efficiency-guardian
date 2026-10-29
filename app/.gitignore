@@ -1,0 +1,4 @@
+# Lo que generan swift build y build.zsh.
+/.build/
+/.swiftpm/
+/build/

@@ -1,0 +1,18 @@
+{
+  "now": 1800000240,
+  "session": "timed",
+  "session_started": 1800000000,
+  "session_ends": 1800001500,
+  "stop_at": 1800000480,
+  "pass_until": 1800000360,
+  "passes_used": 1,
+  "passes_max": 3,
+  "pass_minutes": 5,
+  "pass_groups": ["youtube"],
+  "stop_delay_minutes": 5,
+  "timed_lock": false,
+  "timed_presets": [25, 50, 90],
+  "autostart_at_boot": true,
+  "blocking": true,
+  "blocked_domains": 1
+}

@@ -39,6 +39,10 @@ Verificado el **2026-10-29**:
 | Módulos de zsh | `zsh/datetime` (`EPOCHSECONDS`, `strftime`) y `zsh/system` (`zsystem flock`) están en `/usr/lib/zsh/5.9/zsh/`. `zsystem flock` exige que el archivo exista, espera con `-t segundos` (sale con 2 si se agota) y suelta el candado al terminar el proceso, también con `exit 1`. | Probado en la terminal |
 | `install -d` sobre una carpeta que ya existe | **Sí** le cambia los permisos (`700` → `755`): así el instalador de la Fase 4 corrige la carpeta de datos de la Fase 1 | Probado con una carpeta temporal |
 | `plutil` y JSON | `plutil -extract clave raw -o - archivo.json` lee JSON (y falla si es inválido). `plutil -lint` **no** acepta JSON. | Probado |
+| Xcode y paquetes de Swift | Xcode 27.1, Swift 6.4. Un paquete de Swift con una app `MenuBarExtra` compila (`swift build`) y prueba con Swift Testing (`swift test`) desde la Terminal, sin abrir Xcode. `platforms: [.macOS(.v26)]` exige `swift-tools-version: 6.2`. | Probado (Fase 5) |
+| Núcleos | 10 (`hw.activecpu`): es también el número de hilos de Swift concurrency, que no crece si se bloquean. GCD sí crea más (hasta 64 hilos limitados, `kern.wq_max_constrained_threads`). | `sysctl` |
+| `timeout` | **No existe** en macOS. Para cortar un comando colgado: `perl -e 'alarm 120; exec @ARGV' comando` (sale con 142 si se cortó). | Probado |
+| `zsh -n` y `$(<archivo)` | `zsh -n` **lee** el archivo de `"$(<archivo)"` dentro de un arreglo (`a=(-e "$(<f)")`) o como argumento de un comando; en una variable suelta (`a=$(<f)`) no. | Probado (sesión 5) |
 
 ## Estado del bloqueo manual previo
 
