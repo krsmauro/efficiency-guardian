@@ -2,30 +2,31 @@ import GuardianCore
 import SwiftUI
 
 /// El menú que se abre al hacer clic en el ícono. Qué opciones hay, y si están
-/// activas, lo deciden MenuModel y MenuSummary; aquí solo se dibujan.
+/// activas, lo decide MenuSnapshot; aquí solo se dibujan. Solo lee valores que
+/// cambian cuando cambia lo que se ve (ver AppModel).
 struct MenuContent: View {
   let model: AppModel
 
   var body: some View {
     // El resumen: líneas sin acción (macOS las muestra en gris).
-    ForEach(Array(model.summary.enumerated()), id: \.offset) { line in
+    ForEach(Array(model.screen.summary.enumerated()), id: \.offset) { line in
       Text(line.element)
     }
     Divider()
 
-    if let menu = model.menu, let status = model.result.status {
+    if let menu = model.screen.menu {
       actions(menu)
       Divider()
-      SettingsMenu(status: status)
-    } else if model.result != .loading {
+      SettingsMenu(lines: model.screen.settings)
+    } else if model.screen.offersRetry {
       Button("Reintentar") {
         Task { await model.refresh() }
       }
     }
 
     Toggle("Abrir al iniciar sesión", isOn: Binding(
-      get: { model.opensAtLogin },
-      set: { model.setOpensAtLogin($0) }
+      get: { model.loginItem.isOn },
+      set: { model.loginItem.set($0) }
     ))
     Divider()
     Button("Salir") {

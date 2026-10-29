@@ -22,15 +22,16 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 
 - **Regla del usuario (2026-10-29): no escribir más código hasta que el usuario haga las pruebas manuales** (1.5, 1.6, 4.4, 3.1 y 5.6). Si un agente encuentra un fallo antes, **lo documenta** (en la especificación de su fase y en la bitácora) para que otro agente lo arregle después, cuando el usuario lo pida. No lo arregla.
 - **Fases 1 y 4: instaladas el 2026-10-29** (1.5 hecho, al segundo intento: ver la bitácora, sesión 6). Verificación manual (1.6 y 4.4) **cerrada por el usuario el mismo día, en parte**: no quiere seguir con checklists; lo que falte lo descubrirá usándolo y lo reportará. Funcionan en el sistema real: bloqueo de los 10 grupos en los 5 navegadores, regla de sudoers, pase, retraso al terminar y LaunchDaemon. **Sin probar** (casillas sin marcar en cada checklist): sesión por tiempo (`start 25`), reposo, reposo de una noche, arranque automático tras reiniciar, candado, vista previa de Studio. **Fallo conocido sin arreglar:** la pista de `stop` ([Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#fallos-encontrados-en-la-verificación-manual-sin-arreglar)).
-- **Fase 5: código terminado** (5.1 a 5.4): la app de barra de menús en `app/`. Compila y sus pruebas pasan, pero **nunca ha hablado con el motor instalado**. Una revisión encontró 6 fallos, arreglados pero dos de ellos **sin probar** ([lista](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-revisión-2026-10-29-arreglados-sin-probar-a-mano)). Faltan 5.5 (decidir si absorbe la Fase 3) y la verificación del usuario (5.6).
+- **Fase 5: instalada en `/Applications` el 2026-10-29; verificación del usuario (5.6) en curso.** El ícono, el menú y el ítem de inicio funcionan con el motor real. **Fallo encontrado:** los submenús se cerraban solos a los 1-2 s. Arreglado y con prueba, **pendiente de que el usuario lo confirme** ([detalle](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-verificación-manual-56)). De la revisión anterior siguen sin probar los fallos 1 y 4 ([lista](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-revisión-2026-10-29-arreglados-sin-probar-a-mano)). Falta 5.5 (decidir si absorbe la Fase 3).
 - **Fase 3: script escrito y probado sin navegadores** (3.2 y la mitad de 3.3). **No lo instala todavía el instalador:** quién lo ejecuta cada 15 s depende de la prueba de permisos 3.1.
-- **Siguientes pasos: el usuario.** Ya no queda trabajo del agente que no dependa de ellos:
+- **Fase 6, primera parte: especificación revisada por el usuario el 2026-10-29** (ajustes sin Terminal, alargar y acortar, pases para otros sitios). **Siguiente: el agente escribe A y B** ([orden](docs/fases/fase-6-ajustes-y-controles.md#orden-propuesto)).
+- **Siguientes pasos del usuario** (anteriores a la Fase 6, siguen valiendo):
   - **Usar el motor a diario** y reportar lo que falle. Si reporta un fallo, el agente lo arregla (con una prueba que lo reproduzca) y lo anota en la especificación de su fase.
   - **Cuando quiera:** compilar e instalar la app (`zsh app/build.zsh` y copiarla a `/Applications`, sin sudo; [instrucciones](docs/fases/fase-5-app-barra-de-menus.md#compilar-e-instalar-lo-hace-el-usuario-sin-sudo)) y hacer su [verificación](docs/fases/fase-5-app-barra-de-menus.md#verificación-manual-56-la-hace-el-usuario-con-el-motor-instalado) (5.6).
   - La prueba de permisos de la Fase 3 (3.1), sin sudo y en cualquier momento: `zsh tools/try-close-tabs.zsh terminal` y luego `agent` ([instrucciones](docs/fases/fase-3-cerrar-pestanas.md#cómo-hacer-la-prueba-toolstry-close-tabszsh-sin-sudo)). Anotar a nombre de quién pide macOS el permiso.
 - **Después, el agente (solo cuando el usuario lo pida, tras sus pruebas):** con el resultado de 3.1, decidir 5.5 (¿cierra las pestañas la app o un LaunchAgent?) y escribir el disparador de la Fase 3. Con los resultados de 1.6, 4.4 y 5.6, corregir lo que falle. O guiar la Fase 2 (manual).
-- **Código escrito:** motor `bin/guardian` + 20 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, `close-tabs/` (Fase 3, 4 archivos), `tools/try-close-tabs.zsh`, y la app en `app/` (Fase 5: 24 archivos de Swift, `Package.swift` y `build.zsh`).
-- **Pruebas:** 612 comprobaciones en `tests/` (`zsh tests/run.zsh`) y 59 de la app (`swift test --package-path app`). Todas pasan. **Instalado** el motor (Fases 1 y 4); las 4 líneas manuales de YouTube se quitaron al instalar.
+- **Código escrito:** motor `bin/guardian` + 20 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, `close-tabs/` (Fase 3, 4 archivos), `tools/try-close-tabs.zsh`, y la app en `app/` (Fase 5: 25 archivos de Swift, `Package.swift` y `build.zsh`).
+- **Pruebas:** 612 comprobaciones en `tests/` (`zsh tests/run.zsh`) y 63 de la app (`swift test --package-path app`). Todas pasan. **Instalado** el motor (Fases 1 y 4); las 4 líneas manuales de YouTube se quitaron al instalar.
 - **Última actualización:** 2026-10-29.
 
 ## Cómo usar este plan (agentes)
@@ -79,6 +80,9 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 | D11 | Sesión indefinida **automática al encender** (`AUTOSTART_AT_BOOT`, **activada por defecto**). Termina al apagar el Mac. | ✅ usuario | El fin se detecta al **siguiente arranque**, con `kern.bootsessionuuid`, que es más fiable que engancharse al apagado |
 | D12 | Interfaz v1: **app de barra de menús en Swift**. La "experiencia asombrosa" se investiga y se pule después (Fase 6). | ✅ usuario | → [fase 5](docs/fases/fase-5-app-barra-de-menus.md) |
 | D13 | **Archivos de código con una sola responsabilidad y unas 100 líneas como máximo (150 es inaceptable).** Lo comprueba `tests/check-length.zsh`. | ✅ usuario | Permite depurar a mano. El motor se divide en `bin/guardian` (entrada) + módulos en `lib/`. Como el motor corre como root, los módulos se cargan solo desde una ruta fija de root. → [fase 1](docs/fases/fase-1-motor.md#regla-de-tamaño-d13-requisito-del-usuario) |
+| D14 | **Para quién:** "yo ahora, otros después". Se construye para este Mac, sin cerrar la puerta a compartirla | ✅ usuario (2026-10-29) | Compartirla exige firma Developer ID (de pago), instalador sin Terminal y un helper en vez de sudoers: queda fuera por ahora → [fase 6](docs/fases/fase-6-ajustes-y-controles.md#yo-ahora-otros-después-qué-se-cuida-ya) |
+| D15 | **Ajustes desde la app, con la contraseña del Mac al guardar** (nada de Terminal) | ✅ usuario (2026-10-29) | Misma barrera que hoy da `sudo` → [fase 6](docs/fases/fase-6-ajustes-y-controles.md#c-ajustes-en-la-app-con-la-contraseña-al-guardar) |
+| D16 | **Alargar y acortar** una sesión por tiempo (no pasarla a sin fin). Alargar no tiene tope. **Acortar nunca termina antes que el retraso al terminar**: si no, es igual que `stop` | ✅ usuario (2026-10-29) | → [fase 6](docs/fases/fase-6-ajustes-y-controles.md#a-alargar-y-acortar-una-sesión-por-tiempo) |
 
 ## Fases
 
@@ -89,7 +93,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 | 3 | Cerrar las pestañas abiertas de sitios bloqueados | 🔨 [script escrito](docs/fases/fase-3-cerrar-pestanas.md) (falta la prueba de permisos 3.1 y el disparador) |
 | 4 | Sesiones por tiempo e indefinidas, retraso al terminar, arranque automático, pases | ✅ [código escrito](docs/fases/fase-4-sesiones-y-tiempo.md) (falta 4.4) |
 | 5 | App de barra de menús en Swift (v1) | ✅ [código escrito](docs/fases/fase-5-app-barra-de-menus.md) (falta 5.5 y la verificación 5.6) |
-| 6 | Investigar y pulir la experiencia de usuario | ⏳ se escribe al llegar |
+| 6 | Ajustes y controles desde la app (primera parte); después, pulir la experiencia | ✅ [lista](docs/fases/fase-6-ajustes-y-controles.md) (revisada por el usuario) |
 
 ### Fase 1: motor de bloqueo
 - [x] 1.1 Crear `blocklists/*.txt` a partir de [04-dominios.md](docs/investigacion/04-dominios.md): los 10 grupos de D6.
@@ -147,8 +151,8 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
 - ¿Existe la opción "Alternar" en la acción "Definir Concentración" en el Mac? (Fase 2)
 - ¿Un LaunchAgent con `osascript` obtiene permiso de Automatización, o falla en silencio? (Fase 3)
 - ¿launchd ejecuta `reconcile` en cuanto el Mac despierta? (Fase 4)
-- ¿Funciona `SMAppService.mainApp` (abrir al iniciar sesión) con la firma local (ad-hoc)? (Fase 5, en 5.6)
-- ¿Llegan las notificaciones de una app con firma local? (Fase 5, en 5.6)
+- ¿Funciona `SMAppService.mainApp` (abrir al iniciar sesión) con la firma local (ad-hoc)? (Fase 5, en 5.6) **El registro sí** (2026-10-29: "Login Item Added"); falta ver que la app se abra al iniciar sesión, y si sigue registrada tras recompilar (cada compilación cambia la firma).
+- ~~¿Llegan las notificaciones de una app con firma local?~~ **Sí** (2026-10-29, las del pase).
 
 ## Bitácora
 
@@ -296,3 +300,14 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
 - **Más resultados:** Gmail, Drive y Meet funcionan con el bloqueo. Los 82 dominios resuelven al bloqueo (`dscacheutil`). Pinterest redirige a `co.pinterest.com`, que ya está en la lista. LinkedIn en Thorium cargó con y sin bloqueo.
 - **Decisión del usuario:** no seguir con los checklists. Lo que falta se descubrirá con el uso; él reportará los fallos. Quedan sin probar: sesión por tiempo, reposo, arranque automático, candado y la vista previa de Studio.
 - **Siguiente:** usarlo. Cuando quiera: instalar la app (5.6), la prueba de permisos (3.1) o la Fase 2 (manual).
+
+### 2026-10-29 · Sesión 7: la app con el motor real (empieza 5.6)
+- **Hecho por el agente:** pruebas en verde; la app compilada; comprobado que sus comandos coinciden con la regla de sudoers instalada (`start`, `start 25/50/90`, `stop`, `cancel-stop`, `pass`); copiada a `/Applications` (sin sudo).
+- **El usuario la abrió:** candado cerrado en la barra de menús, menú correcto, "Login Item Added" (el ítem de inicio funciona con la firma local). Cerró sin querer el aviso de permiso de las notificaciones.
+- **Fallo encontrado por el usuario:** los submenús se cerraban solos a los 1-2 s. **Arreglado** porque impedía seguir con 5.6 (como el `chown` de la sesión 6): el menú se redibujaba cada segundo. Detalle, arreglo y lo que falta confirmar en la [especificación](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-verificación-manual-56). `MenuSnapshot.swift` y sus pruebas son nuevos; `AppModel.swift` se dividió (la casilla pasó a `LoginItem.swift`, los avisos a `Notifier.swift`) para no pasar de 100 líneas.
+- **Que la pista de `stop` esté rota no afecta a la app:** la app solo muestra los mensajes del motor cuando algo falla.
+- **Confirmado por el usuario:** los submenús ya no se cierran. La casilla de inicio sigue marcada tras recompilar. Desde la app, sin contraseña: convertir la sesión sin fin en una de 25 min (hasta las 14:20; la primera sesión por tiempo en el motor instalado) y un pase.
+- **Error del agente:** tomó "el pase de 5 minutos cierra todos los menús" por un fallo confirmado (que la cuenta atrás del ícono cerrara el menú) y lo anotó así. El usuario dijo que funciona bien: seguramente hablaba del menú que se cierra al hacer clic. Corregido en la especificación; queda por comprobar en el próximo pase.
+- **Pedidos del usuario tras ver la app:** nada de Terminal para los ajustes, alargar y acortar una sesión por tiempo, y pases para otros sitios con fricción. **Decisiones:** D14 (para quién), D15 (contraseña al guardar) y D16 (alargar y acortar). Con eso, el borrador de la [Fase 6, primera parte](docs/fases/fase-6-ajustes-y-controles.md). No se escribió código para ella.
+- **Revisión del usuario:** llegaron las notificaciones del pase. Aceptó que acortar nunca termine antes que el retraso (D16) y los supuestos (alargar sin tope, límite de pases compartido).
+- **Siguiente:** el agente escribe A y B de la Fase 6. Siguen pendientes de 5.6: si la app se abre al iniciar sesión (mañana) y el aviso del arranque.

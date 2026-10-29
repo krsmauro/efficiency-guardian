@@ -2,12 +2,17 @@ import Foundation
 import GuardianCore
 import UserNotifications
 
-/// Envía las notificaciones del sistema. Qué avisar lo decide NotificationPlanner.
+/// Envía las notificaciones del sistema. Qué avisar lo decide NotificationPlanner;
+/// el arranque ya avisado se guarda para no repetirlo si la app se vuelve a abrir.
 ///
 /// Solo funciona dentro del paquete .app (necesita un identificador): con el
 /// binario suelto (swift run) no hace nada.
 @MainActor
 final class Notifier: NSObject, UNUserNotificationCenterDelegate {
+  static let announcedBootKey = "announcedBoot"
+
+  private var planner = NotificationPlanner(
+    announcedBoot: UserDefaults.standard.integer(forKey: announcedBootKey))
   private let center: UNUserNotificationCenter? =
     Bundle.main.bundleIdentifier == nil ? nil : UNUserNotificationCenter.current()
 
@@ -22,7 +27,15 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     center?.requestAuthorization(options: [.alert]) { _, _ in }
   }
 
-  func post(_ notifications: [AppNotification]) {
+  /// Avisa de lo que acaba de pasar con este estado y esta hora.
+  func update(_ status: GuardianStatus, now: Int) {
+    post(planner.notifications(for: status, now: now, bootTime: SystemClock.bootTime))
+    if UserDefaults.standard.integer(forKey: Self.announcedBootKey) != planner.announcedBoot {
+      UserDefaults.standard.set(planner.announcedBoot, forKey: Self.announcedBootKey)
+    }
+  }
+
+  private func post(_ notifications: [AppNotification]) {
     guard let center else { return }
     for notification in notifications {
       let content = UNMutableNotificationContent()

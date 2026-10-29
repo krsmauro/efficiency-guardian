@@ -10,7 +10,7 @@ struct GuardianBarApp: App {
     MenuBarExtra {
       MenuContent(model: model)
     } label: {
-      MenuBarLabel(icon: model.icon)
+      MenuBarLabel(model: model)
     }
     .menuBarExtraStyle(.menu)
   }

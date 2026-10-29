@@ -1,6 +1,6 @@
 # Fase 5: app de barra de menús en Swift (v1)
 
-> **Especificación lista y código escrito el 2026-10-29 (pasos 5.1 a 5.4).** Una revisión independiente encontró 6 fallos, ya arreglados en el código pero **sin probar a mano** (ver "Fallos de la revisión"). El borrador era del 2026-10-28; los cambios están marcados con **(cambio)**. Requiere la Fase 4, que aporta `guardian status --json` y todos los comandos. **Nada de la app se ha probado con el motor instalado** (no lo está todavía): falta la verificación del usuario (5.6). Contexto técnico: [02-integracion-macos.md](../investigacion/02-integracion-macos.md#si-algún-día-hay-app-propia-en-swift-fase-opcional).
+> **Especificación lista y código escrito el 2026-10-29 (pasos 5.1 a 5.4).** Una revisión independiente encontró 6 fallos, ya arreglados en el código pero **sin probar a mano** (ver "Fallos de la revisión"). El borrador era del 2026-10-28; los cambios están marcados con **(cambio)**. Requiere la Fase 4, que aporta `guardian status --json` y todos los comandos. **Verificación del usuario (5.6) empezada el 2026-10-29**, con el motor instalado: encontró un fallo (los submenús se cerraban solos), arreglado y pendiente de confirmar; ver "Fallos de la verificación manual". Contexto técnico: [02-integracion-macos.md](../investigacion/02-integracion-macos.md#si-algún-día-hay-app-propia-en-swift-fase-opcional).
 
 ## Lo que pidió el usuario (D12)
 
@@ -112,6 +112,7 @@ La lógica que decide qué se muestra no toca el sistema y se prueba sola; la pa
 | `IconState.swift` | Qué ícono y qué texto lleva la barra de menús |
 | `MenuModel.swift` | Qué opciones tiene el menú, activas o no, con su texto |
 | `MenuSummary.swift` | Las líneas de resumen y de configuración del menú |
+| `MenuSnapshot.swift` | Todo lo que dibuja el menú, ya en texto. La app solo lo redibuja si cambia (fallo de 5.6) |
 | `NotificationPlanner.swift` | Qué notificaciones enviar al cambiar el estado o pasar el tiempo |
 
 **`GuardianBar`** (la app; se prueba a mano):
@@ -125,7 +126,7 @@ La lógica que decide qué se muestra no toca el sistema y se prueba sola; la pa
 | `StateWatcher.swift` | Vigilar la carpeta de datos |
 | `MenuBarLabel.swift`, `MenuContent.swift`, `SettingsMenu.swift` | Las vistas |
 | `Notifier.swift` | Enviar notificaciones |
-| `LoginItem.swift` | Abrir al iniciar sesión |
+| `LoginItem.swift` | Abrir al iniciar sesión, y la casilla del menú (`LoginItemToggle`) |
 | `Alerts.swift` | La alerta de error de un comando |
 | `SystemClock.swift` | La hora actual y la del arranque del Mac (`kern.boottime`) |
 
@@ -133,7 +134,7 @@ La lógica que decide qué se muestra no toca el sistema y se prueba sola; la pa
 
 ## Pruebas
 
-- **`swift test --package-path app`** prueba `GuardianCore` (Swift Testing, 59 pruebas, menos de 1 s). `app/build.zsh` las ejecuta antes de compilar y se niega a seguir si fallan. **No forman parte de `tests/run.zsh`**: el instalador ejecuta esas pruebas antes de instalar el motor, y no debe depender de compilar Swift.
+- **`swift test --package-path app`** prueba `GuardianCore` (Swift Testing, 63 pruebas, menos de 1 s). `app/build.zsh` las ejecuta antes de compilar y se niega a seguir si fallan. **No forman parte de `tests/run.zsh`**: el instalador ejecuta esas pruebas antes de instalar el motor, y no debe depender de compilar Swift.
 - **Con el motor de verdad:** `EngineIntegrationTests.swift` ejecuta el `bin/guardian` del repositorio sin root sobre un hosts temporal (como `tests/e2e.zsh`) y comprueba que los comandos de la app, sus argumentos y su forma de leer las respuestas encajan con el motor. Lo único que no prueba es la ruta instalada con `sudo -n`.
 - **¿Detectan errores?** Se rompió el código a propósito de 24 formas en una copia (18 al escribirlo y 6 volviendo a meter los fallos de la revisión): todas fallaron. Tres (en `ProcessRunner`) se detectan porque las pruebas **se cuelgan**, no porque fallen: es la naturaleza de ese fallo.
 - **Sin pruebas automáticas:** la parte de la app que habla con macOS (`GuardianBar`: vistas, alertas, ítem de inicio, notificaciones, temporizador). Solo se comprobó que la app arranca y sigue viva 5 s sin el motor instalado (binario suelto, sin registrar nada en el Mac).
@@ -152,6 +153,19 @@ Una revisión independiente (un agente aparte, buscando fallos) encontró uno de
 | 6 | Leve | Textos que no decían lo que hace el motor: pase que cubre todos los grupos, duración menor que el retraso, terminar cuando la sesión acaba antes | Textos nuevos (ver "Menú al hacer clic") | Sí |
 - **Contrato entre el motor y la app:** `tests/test-app-contract.zsh` (sí está en `tests/run.zsh`) ejecuta el motor real y comprueba que su `status --json` coincide byte a byte con los archivos de `app/Tests/GuardianCoreTests/Fixtures/`. Las pruebas de Swift decodifican esos mismos archivos. Si alguien cambia `status-json.zsh`, falla `tests/run.zsh` hasta que se regeneren (`zsh tests/test-app-contract.zsh --write`) y la app se adapte.
 
+## Fallos de la verificación manual (5.6)
+
+- **2026-10-29 · Los submenús se cerraban solos a los 1-2 s** ("Pasar a sesión por tiempo", "Configuración"): no daba tiempo a leer ni a elegir. Lo encontró el usuario en su primera prueba.
+  - **Causa:** cada segundo la app asignaba la hora (`now`) en `AppModel`, y el menú la leía (a través del resumen y las opciones). SwiftUI volvía a dibujar el menú de `MenuBarExtra` cada segundo, aunque el texto fuera igual, y macOS cerraba el submenú abierto. Ninguna prueba lo veía: es un comportamiento de la interfaz.
+  - **Arreglo (confirmado por el usuario el 2026-10-29, sin cuentas atrás en marcha):** el menú solo lee `MenuSnapshot` (nuevo, en `GuardianCore`), que tiene los textos y nada que cambie cada segundo, y la app solo lo vuelve a asignar si cambió. Lo mismo con el ícono y la casilla "Abrir al iniciar sesión" (`LoginItemToggle`, en `LoginItem.swift`). El ícono se lee en `MenuBarLabel` y no en la escena, para que su cuenta atrás no redibuje el menú. `MenuSnapshotTests` comprueba que el contenido del menú no cambia de un segundo a otro (con pase y terminación pendiente incluidos) ni con una lectura nueva; si alguien mete una cuenta atrás en el menú, falla (probado rompiéndolo a propósito).
+  - **Lo que queda:** con una sesión por tiempo, el resumen dice los minutos que quedan, así que el menú se redibuja una vez por minuto. Un submenú abierto justo en ese momento se cerraría.
+- **2026-10-29 · ¿Se cierra el menú durante un pase? Sin confirmar.** El agente sospechaba que la cuenta atrás del ícono (pase, terminación pendiente; una vez por minuto en la sesión por tiempo) hace que `MenuBarExtra` reconstruya y cierre el menú. El usuario escribió "el pase de 5 minutos cierra todos los menús"; el agente lo tomó por una confirmación, pero el usuario aclaró que **funciona bien**: probablemente se refería a que el menú se cierra al hacer clic en el pase, que es lo normal. **Comprobar** la próxima vez que haya un pase en curso: abrir el menú y esperar 5 s. Si se cierra solo, las opciones son (a) `NSStatusItem` + `NSMenu` de AppKit, que cambian el ícono y los textos sin reconstruir el menú, o (b) no cambiar el ícono con el menú abierto.
+- **Primeros resultados (2026-10-29):** el ícono (candado cerrado) y el menú salen como dice la especificación. `SMAppService.mainApp.register()` **sí funciona con la firma local**: macOS avisó "Login Item Added" y la casilla salió marcada. Falta ver que la app se abra de verdad al iniciar sesión. La casilla sigue marcada tras recompilar (la firma cambió). macOS pidió permiso para las notificaciones; el usuario cerró el aviso, las activó después en Ajustes del Sistema y **llegaron las del pase** (con la firma local funcionan). **Sin contraseña desde la app:** pasar a sesión por tiempo (25 min) y el pase (71 dominios durante el pase).
+- **Pedidos del usuario tras verla (2026-10-29), para la Fase 6:**
+  1. **Nada de Terminal.** El submenú "Configuración" muestra comandos (`sudo nano …`) en gris, que parecen opciones desactivadas. "La idea de una interfaz es que el usuario no tenga que usar la Terminal." La configuración tiene que poder cambiarse desde la app.
+  2. **En una sesión por tiempo** no hay forma de alargarla, acortarla ni pasarla a sin fin (el motor lo rechaza a propósito: `start <min>` con otra por tiempo da error).
+  3. **Pases para otros sitios, con fricción:** "para mí basta con YouTube, pero como app general, el usuario debería elegir qué sitios."
+
 ## Compilar e instalar (lo hace el usuario, sin sudo)
 
 ```
@@ -164,6 +178,9 @@ Va en `/Applications` para que el ítem de inicio apunte a un lugar fijo. Un adm
 
 ## Fuera de la v1 (→ Fase 6)
 
+La primera parte de la Fase 6 ya tiene borrador ([fase-6-ajustes-y-controles.md](fase-6-ajustes-y-controles.md)): ajustes en la app con contraseña, alargar y acortar, y pases para otros sitios.
+
+
 - Interruptor en el Centro de control (`ControlWidgetToggle`; firma gratuita sin confirmar).
 - Ventana de configuración editable. Debería pedir la contraseña de administrador al guardar, para conservar la fricción.
 - Atajo de teclado global, sonidos, animaciones, pantalla de bienvenida, ícono propio de la app.
@@ -174,9 +191,9 @@ Va en `/Applications` para que el ítem de inicio apunte a un lugar fijo. Un adm
 
 - [ ] El ícono cambia en ≤2 s tras cada acción del menú, y al instante tras activar o desactivar la Concentración (Fase 2).
 - [ ] Al vencer un pase o una sesión, el ícono cambia en el acto (sin esperar a `reconcile`), y hosts en ≤30 s.
-- [ ] Cada opción del menú funciona sin pedir contraseña.
+- [ ] Cada opción del menú funciona sin pedir contraseña. (2026-10-29: el pase y "Pasar a sesión por tiempo ▸ 25 min", sí; las demás, sin probar.)
 - [ ] Las opciones no disponibles aparecen desactivadas y con el motivo.
-- [ ] Al abrirla por primera vez, macOS pide permiso para las notificaciones. **Con la firma local, ¿llegan?** (sin verificar)
+- [x] Al abrirla por primera vez, macOS pide permiso para las notificaciones. **Con la firma local, ¿llegan?** (2026-10-29: **sí**, las del pase.)
 - [ ] La app se abre sola al iniciar sesión. **¿Funciona `SMAppService.mainApp` con la firma local?** (sin verificar; si no, añadirla a mano en Ajustes → General → Ítems de inicio)
 - [ ] Tras reiniciar el Mac con `AUTOSTART_AT_BOOT=yes`, el ícono muestra la sesión indefinida y llega el aviso "Modo enfoque activado al encender el Mac".
 - [ ] Con el menú abierto, la cuenta atrás sigue avanzando.

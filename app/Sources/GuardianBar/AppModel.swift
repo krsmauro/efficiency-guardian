@@ -4,36 +4,35 @@ import Observation
 
 /// El estado que ve la interfaz: lee el estado del motor y ejecuta los comandos.
 /// Qué se muestra lo decide GuardianCore; cuándo se vuelve a leer, Scheduler.
+///
+/// La interfaz solo observa `icon`, `screen` y la casilla de `loginItem`, y solo
+/// se asignan cuando cambian: cada vez que SwiftUI redibuja el menú, macOS
+/// cierra el submenú abierto (fallo de la verificación 5.6). El resto no se
+/// observa: `now` cambia cada segundo y `result` en cada lectura.
 @MainActor @Observable
 final class AppModel {
-  static let announcedBootKey = "announcedBoot"
+  private(set) var icon = IconState.loading
+  private(set) var screen = MenuSnapshot(result: .loading, now: 0, busy: false)
 
-  private(set) var result: StatusResult = .loading
-  private(set) var now = SystemClock.now
+  @ObservationIgnored private(set) var result: StatusResult = .loading
+  @ObservationIgnored private(set) var now = SystemClock.now
   /// Un comando en marcha: el menú desactiva las acciones.
-  private(set) var busy = false
-  private(set) var opensAtLogin = LoginItem.isEnabled
-
+  @ObservationIgnored private var busy = false
   @ObservationIgnored private(set) var reading = false
   @ObservationIgnored private var readAgain = false
   /// Reloj monótono: si alguien cambia la hora del Mac, el sondeo no se detiene.
   @ObservationIgnored private var lastRead: ContinuousClock.Instant?
-  @ObservationIgnored private var planner = NotificationPlanner(
-    announcedBoot: UserDefaults.standard.integer(forKey: announcedBootKey))
   @ObservationIgnored private let notifier = Notifier()
   @ObservationIgnored private var scheduler: Scheduler?
+  @ObservationIgnored let loginItem = LoginItemToggle()
 
   init() {
     notifier.requestPermission()
     LoginItem.registerOnFirstLaunch()
-    opensAtLogin = LoginItem.isEnabled
+    loginItem.reread()
     scheduler = Scheduler(model: self)
     Task { await refresh() }
   }
-
-  var icon: IconState { IconState.from(result, now: now) }
-  var summary: [String] { MenuSummary.lines(result, now: now) }
-  var menu: MenuModel? { result.status.map { MenuModel(status: $0, now: now, busy: busy) } }
 
   /// Segundos desde la última lectura (o muchísimos si aún no hubo ninguna).
   var secondsSinceRead: Int {
@@ -54,22 +53,23 @@ final class AppModel {
       now = SystemClock.now
       lastRead = ContinuousClock.now
       result = latest
-      notify()
+      update()
     } while readAgain
     reading = false
     // La casilla también puede cambiar desde Ajustes del Sistema.
-    opensAtLogin = LoginItem.isEnabled
+    loginItem.reread()
   }
 
   /// Cada segundo (lo llama Scheduler): avanza la cuenta atrás.
   func tick() {
     now = SystemClock.now
-    notify()
+    update()
   }
 
   func run(_ command: GuardianCommand) async {
     guard !busy else { return }
     busy = true
+    publish()
     let outcome = await GuardianClient.run(command)
     busy = false
     await refresh()
@@ -78,19 +78,16 @@ final class AppModel {
     }
   }
 
-  func setOpensAtLogin(_ enabled: Bool) {
-    if let error = LoginItem.set(enabled) {
-      Alerts.show("No se pudo cambiar el inicio de sesión", error)
-    }
-    opensAtLogin = LoginItem.isEnabled
+  private func update() {
+    publish()
+    if let status = result.status { notifier.update(status, now: now) }
   }
 
-  private func notify() {
-    guard let status = result.status else { return }
-    notifier.post(planner.notifications(for: status, now: now, bootTime: SystemClock.bootTime))
-    // Se guarda para no repetir el aviso del arranque si la app se vuelve a abrir.
-    if UserDefaults.standard.integer(forKey: Self.announcedBootKey) != planner.announcedBoot {
-      UserDefaults.standard.set(planner.announcedBoot, forKey: Self.announcedBootKey)
-    }
+  /// Lo que ve la interfaz, asignado solo si cambió (ver arriba).
+  private func publish() {
+    let newIcon = IconState.from(result, now: now)
+    if newIcon != icon { icon = newIcon }
+    let newScreen = MenuSnapshot(result: result, now: now, busy: busy)
+    if newScreen != screen { screen = newScreen }
   }
 }

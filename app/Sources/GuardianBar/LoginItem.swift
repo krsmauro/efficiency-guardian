@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import ServiceManagement
 
 /// Abrir la app al iniciar sesión (SMAppService.mainApp).
@@ -46,5 +47,25 @@ enum LoginItem {
     } catch {
       return error.localizedDescription
     }
+  }
+}
+
+/// La casilla "Abrir al iniciar sesión" del menú. Solo se asigna si cambia: cada
+/// vez que SwiftUI redibuja el menú, macOS cierra el submenú abierto (ver AppModel).
+@MainActor @Observable
+final class LoginItemToggle {
+  private(set) var isOn = LoginItem.isEnabled
+
+  /// Se vuelve a leer en cada lectura del estado: puede cambiar desde Ajustes.
+  func reread() {
+    let enabled = LoginItem.isEnabled
+    if enabled != isOn { isOn = enabled }
+  }
+
+  func set(_ enabled: Bool) {
+    if let error = LoginItem.set(enabled) {
+      Alerts.show("No se pudo cambiar el inicio de sesión", error)
+    }
+    reread()
   }
 }
