@@ -93,5 +93,5 @@ Swift es **el único lenguaje con una ventaja enorme aquí**, pero **solo para l
 
 1. **Corre como root**, así que su intérprete debe ser del sistema y no modificable por el usuario. `/bin/zsh` lo es; el `node` de nvm y el `python3` de Homebrew no.
 2. **Cero dependencias:** sigue funcionando aunque se actualice Node o Python, o cambie la versión activa de nvm.
-3. **Es pequeño**, unas 150 líneas: leer una lista, reescribir un bloque de texto y vaciar la caché DNS. No hay lógica que justifique otro lenguaje.
+3. **Es pequeño**: leer una lista, reescribir un bloque de texto y vaciar la caché DNS. No hay lógica que justifique otro lenguaje. Va repartido en módulos de unas 100 líneas como máximo (regla D13).
 4. TypeScript tendría sentido si más adelante hubiera una extensión de navegador. Swift, si hubiera una app nativa.

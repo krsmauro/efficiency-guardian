@@ -25,7 +25,12 @@ Mientras haya dominios bloqueados, cerrar en ≤15 s las pestañas abiertas de e
 
 ### Script `close-tabs`
 
-- **Ruta instalada:** `/usr/local/libexec/efficiency-guardian/close-tabs`, `root:wheel 755`. Corre como el **usuario**, sin sudo.
+- **Ruta instalada:** la carpeta `/usr/local/libexec/efficiency-guardian/close-tabs/` (`root:wheel`, carpeta `755` y archivos `644`; el `.zsh`, `755`). Corre como el **usuario**, sin sudo.
+- **Archivos (regla D13: una responsabilidad y unas 100 líneas como máximo por archivo):**
+  - `close-tabs/close-tabs.zsh`: lee el bloque de hosts y llama a cada navegador abierto. Reutiliza `lib/hosts-block.zsh` de la Fase 1 para leer el bloque.
+  - `close-tabs/chromium.js`: JXA común a Chrome, Brave, Vivaldi y Thorium; recibe el bundle ID.
+  - `close-tabs/safari.js`: JXA para Safari.
+  - `close-tabs/match.js`: extrae el host de una URL y decide si cerrar. Separado para poder probarlo solo.
 - **Pasos:**
   1. Leer el bloque de hosts y obtener la lista de dominios. Si está vacía, salir.
   2. Por cada navegador **que ya esté abierto**, ejecutar un script **JXA** (JavaScript for Automation: `osascript -l JavaScript`) que recorra ventanas y pestañas, extraiga el host de cada URL y cierre las que coincidan.
@@ -47,7 +52,7 @@ Mientras haya dominios bloqueados, cerrar en ≤15 s las pestañas abiertas de e
 ### Disparador: LaunchAgent de usuario
 
 - **Archivo:** `~/Library/LaunchAgents/com.efficiency-guardian.close-tabs.plist`.
-- **Contenido:** `ProgramArguments = [/usr/local/libexec/efficiency-guardian/close-tabs]`, `StartInterval = 15`, `RunAtLoad = true`.
+- **Contenido:** `ProgramArguments = [/usr/local/libexec/efficiency-guardian/close-tabs/close-tabs.zsh]`, `StartInterval = 15`, `RunAtLoad = true`.
 - **Coste:** cuando no hay bloqueo, el script sale de inmediato tras leer hosts.
 - **Cuando exista la app (Fase 5):** puede reemplazar este agente. La app ya está siempre abierta, puede cerrar pestañas **en el instante** en que cambia el estado y tendría su propio permiso de Automatización. Decidirlo en la Fase 5.
 

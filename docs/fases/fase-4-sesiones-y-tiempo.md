@@ -67,6 +67,21 @@ PASS_UNTIL=<epoch o 0>
 - `BOOT_ID` sale de `sysctl -n kern.bootsessionuuid`, que cambia en cada arranque (verificado el 2026-10-28). Sirve para saber que el Mac **se apagó o reinició**.
 - Escribir el estado de forma atómica (temporal + `mv`), igual que hosts.
 
+## Módulos nuevos (regla D13: una responsabilidad y unas 100 líneas como máximo por archivo)
+
+| Archivo | Responsabilidad |
+|---|---|
+| `lib/config.zsh` | Leer y validar la configuración, sin `source` |
+| `lib/state.zsh` | Leer y escribir el estado de forma atómica |
+| `lib/clock.zsh` | Hora actual y `BOOT_ID`, reales o falsos en pruebas |
+| `lib/session.zsh` | Crear, convertir y terminar sesiones |
+| `lib/cmd-start.zsh`, `lib/cmd-stop.zsh`, `lib/cmd-cancel-stop.zsh`, `lib/cmd-pass.zsh`, `lib/cmd-status.zsh`, `lib/cmd-reconcile.zsh` | Un archivo por subcomando |
+| `lib/status-json.zsh` | Salida JSON para la app (separada del texto para personas) |
+| `install/launchdaemon.zsh` | Instalar y cargar el LaunchDaemon |
+| `tests/test-<módulo>.zsh` | Un archivo de pruebas por módulo |
+
+El paso 5 de `reconcile` ("aplicar") es lógica compartida y vive en `lib/session.zsh` o en su propio `lib/apply.zsh` si no cabe.
+
 ## Comandos
 
 | Comando | ¿Root? | Comportamiento |

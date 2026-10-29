@@ -58,6 +58,7 @@ La app se abre sola al iniciar sesión en el Mac.
 - **Abrir al iniciar sesión:** `SMAppService.mainApp.register()`. **Verificar** que funciona con la firma local o gratuita. Si no, añadirla a mano en Ajustes → General → Ítems de inicio.
 - **Firma:** "Sign to Run Locally" o Personal Team (Apple ID gratis). No hace falta cuenta de pago para este alcance: no hay extensión ni daemon dentro de la app.
 - **Proyecto:** Xcode, en `app/` dentro del repositorio.
+- **Regla de tamaño (D13):** un tipo o una vista por archivo, con unas 100 líneas como máximo. Por ejemplo, separar `MenuBarIcon`, `SessionMenu`, `GuardianClient` (ejecuta `sudo -n guardian …`), `StatusReader` (lee el estado) y `Notifier`. `tests/check-length.zsh` también revisa `app/`.
 - **Fase 3 dentro de la app (decidir):** la app podría cerrar las pestañas ella misma en el instante en que cambia el estado, con su propio permiso de Automatización, y retirar el LaunchAgent.
 
 ## Fuera de la v1 (→ Fase 6)

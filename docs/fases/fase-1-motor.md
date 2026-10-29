@@ -6,27 +6,65 @@
 
 Un comando `guardian start|stop|status` que añade o quita un bloque gestionado en `/etc/hosts`. Debe ser seguro de ejecutar como root, idempotente y no tocar nunca nada fuera de su bloque.
 
-> **Alcance de esta fase:** `start` inicia una sesión sin fin y `stop` desbloquea **de inmediato**. La [Fase 4](fase-4-sesiones-y-tiempo.md) añade después las sesiones por tiempo, el retraso al terminar, los pases y el arranque automático, sin cambiar los nombres de estos comandos. Escribe el código pensando en que crecerá: cada comando en su propia función y la escritura de hosts en una función reutilizable.
+> **Alcance de esta fase:** `start` inicia una sesión sin fin y `stop` desbloquea **de inmediato**. La [Fase 4](fase-4-sesiones-y-tiempo.md) añade después las sesiones por tiempo, el retraso al terminar, los pases y el arranque automático, sin cambiar los nombres de estos comandos. Escribe el código pensando en que crecerá, respetando la regla de tamaño (D13, abajo).
+
+## Regla de tamaño (D13, requisito del usuario)
+
+- **Cada archivo de código tiene una sola responsabilidad y unas 100 líneas como máximo. 150 es inaceptable.**
+- Las líneas se cuentan con `wc -l`, incluidos comentarios y líneas en blanco.
+- **Objetivo:** que el usuario pueda depurar a mano leyendo un archivo de principio a fin.
+- **Cuenta como código:** `bin/`, `lib/`, `install*`, `uninstall*`, `tests/` y, más adelante, `app/`.
+- **No cuentan** los datos (`blocklists/*.txt`, `config.default`, `.plist`) ni la documentación (`*.md`).
+- `tests/check-length.zsh` **falla si un archivo de código pasa de 150 líneas y avisa si pasa de 100**. Corre con el resto de las pruebas, así que el instalador no instala código que rompa la regla.
 
 ## Archivos en el repositorio
 
 ```
-bin/guardian              # script zsh (motor)
+bin/guardian              # punto de entrada: carga los módulos y despacha el subcomando
+lib/env.zsh               # entorno seguro (PATH, umask, opciones) y rutas: reales si es root, de prueba si no
+lib/log.zsh               # mensajes de error e información, y registro con logger
+lib/blocklist.zsh         # leer, normalizar y validar listas; lista "nunca bloquear"
+lib/hosts-block.zsh       # texto puro: localizar, quitar y construir el bloque gestionado
+lib/hosts-write.zsh       # copia de seguridad, escritura atómica de /etc/hosts y vaciado de la caché DNS
+lib/cmd-start.zsh         # subcomando start
+lib/cmd-stop.zsh          # subcomando stop
+lib/cmd-status.zsh        # subcomando status
 blocklists/<grupo>.txt    # un archivo por grupo (youtube, facebook, ...), un dominio por línea
-install.sh                # instalador (lo ejecuta el usuario con sudo)
-uninstall.sh              # desinstalador (lo ejecuta el usuario con sudo)
-tests/run.zsh             # pruebas sin root, sobre un hosts temporal
+install.sh                # instalador: solo llama a los pasos en orden (lo ejecuta el usuario con sudo)
+install/files.zsh         # copiar archivos con dueño y permisos
+install/migrate-hosts.zsh # quitar las líneas manuales antiguas de YouTube
+install/sudoers.zsh       # generar, validar e instalar la regla de sudoers
+install/verify.zsh        # comprobar la cadena de dueños y permisos
+uninstall.sh              # desinstalador
+tests/run.zsh             # ejecuta todos los tests/test-*.zsh y check-length.zsh
+tests/assert.zsh          # funciones de aserción compartidas
+tests/test-blocklist.zsh  # pruebas de lib/blocklist.zsh
+tests/test-hosts-block.zsh# pruebas de lib/hosts-block.zsh
+tests/test-commands.zsh   # pruebas de start/stop/status de punta a punta, sobre un hosts temporal
+tests/check-length.zsh    # regla de tamaño
 tests/fixtures/hosts      # copia del hosts real de esta Mac (ver docs/entorno.md)
 ```
+
+Esta lista es una guía. Si un archivo se acerca a 100 líneas, divídelo por responsabilidad y actualiza esta lista.
 
 ## Rutas instaladas
 
 | Ruta | Dueño y permisos | Contenido |
 |---|---|---|
-| `/usr/local/sbin/guardian` | `root:wheel 755` | El motor |
+| `/usr/local/sbin/guardian` | `root:wheel 755` | Punto de entrada |
+| `/usr/local/libexec/efficiency-guardian/lib/*.zsh` | `root:wheel 644` (carpetas `755`) | Módulos del motor |
 | `/usr/local/etc/efficiency-guardian/blocklists/*.txt` | `root:wheel 644` (carpetas `755`) | Listas activas |
 | `/etc/sudoers.d/efficiency-guardian` | `root:wheel 440` | Regla NOPASSWD con argumentos exactos |
 | `/var/db/efficiency-guardian/` | `root:wheel 700` | Copia de seguridad del hosts original (y, en la Fase 4, el estado) |
+
+### Cargar módulos sin abrir un agujero de seguridad
+
+Dividir el motor en módulos (D13) significa que `guardian`, corriendo como root, carga otros archivos con `source`. **Cada módulo cargado como root tiene el mismo poder que el script principal**, así que:
+
+- **Siendo root**, los módulos se cargan **solo** desde la ruta fija `/usr/local/libexec/efficiency-guardian/lib`. **Nunca** desde una ruta relativa, desde `$0` ni desde una variable de entorno.
+- **Sin root** (pruebas), se aceptan `GUARDIAN_LIB_DIR` y las demás variables `GUARDIAN_*`. Así las pruebas usan `lib/` del repositorio.
+- **Recomendado:** siendo root, antes de cargarlos, comprobar que la carpeta y cada módulo son de root y no escribibles por el grupo ni por otros. Si no, abortar.
+- El instalador verifica toda la cadena: `/usr/local/libexec`, `…/efficiency-guardian`, `…/lib` y cada archivo.
 
 ## Interfaz
 
@@ -74,7 +112,7 @@ tests/fixtures/hosts      # copia del hosts real de esta Mac (ver docs/entorno.m
 
 ## Pruebas (`tests/run.zsh`, sin root, sin dependencias)
 
-Cada caso copia `tests/fixtures/hosts` a una carpeta temporal y usa las variables `GUARDIAN_*`. Casos:
+Cada caso copia `tests/fixtures/hosts` a una carpeta temporal y usa las variables `GUARDIAN_*`. Cada archivo `tests/test-*.zsh` prueba un solo módulo y también respeta la regla de tamaño. Casos:
 
 1. `start` añade el bloque con 2 líneas por dominio y deja el resto del archivo **byte a byte** igual.
 2. `start` dos veces da el mismo archivo (idempotente) y la segunda vez no reescribe nada (misma fecha de modificación).
@@ -86,7 +124,8 @@ Cada caso copia `tests/fixtures/hosts` a una carpeta temporal y usa las variable
 8. Comentarios, líneas vacías, mayúsculas y duplicados en las listas se normalizan.
 9. Un hosts sin salto de línea final se maneja bien.
 10. `status` refleja el estado correcto.
-11. **Siendo root, las variables `GUARDIAN_*` se ignoran.** No se puede probar sin root: comprobarlo leyendo el código y verificarlo a mano en la instalación.
+11. **Siendo root, las variables `GUARDIAN_*` (incluida `GUARDIAN_LIB_DIR`) se ignoran.** No se puede probar sin root: comprobarlo leyendo el código y verificarlo a mano en la instalación.
+12. **Regla de tamaño:** `check-length.zsh` falla con un archivo de 151 líneas y avisa con uno de 101 (probarlo con archivos temporales).
 
 ## Instalador (`install.sh`, lo ejecuta el usuario: `sudo ./install.sh`)
 
@@ -103,7 +142,7 @@ Cada caso copia `tests/fixtures/hosts` a una carpeta temporal y usa las variable
    - Escribir en un temporal y validar con `visudo -c -f temporal`.
    - Instalar con `install -m 440 -o root -g wheel`.
    - Ejecutar `visudo -c`. Si falla, **borrar el archivo** y abortar.
-6. **Verificar** que `/usr/local/sbin` y `/usr/local/sbin/guardian` son de root y no escribibles por el grupo ni por otros.
+6. **Verificar** que `/usr/local/sbin`, `/usr/local/sbin/guardian`, `/usr/local/libexec/efficiency-guardian/lib` y cada módulo son de root y no escribibles por el grupo ni por otros.
 7. **Imprimir los siguientes pasos:** la verificación manual de abajo y la Fase 2.
 
 **El desinstalador** ejecuta `guardian stop`, borra la regla de sudoers, el script y la configuración, y **conserva** `/var/db/efficiency-guardian/` (copias de seguridad).

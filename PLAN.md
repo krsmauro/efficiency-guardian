@@ -23,7 +23,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 - **Fase:** planificación terminada, con todas las decisiones tomadas salvo tres supuestos por confirmar (S1, S2 y S3, en D10). No bloquean la Fase 1.
 - **Siguiente paso:** un agente implementa la [Fase 1](docs/fases/fase-1-motor.md).
 - **Código escrito:** ninguno. `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
-- **Última actualización:** 2026-10-28.
+- **Última actualización:** 2026-10-29.
 
 ## Cómo usar este plan (agentes)
 
@@ -70,6 +70,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 | D10 | Dos tipos de sesión, **por tiempo** e **indefinida**. Al pedir terminar, el bloqueo sigue `STOP_DELAY_MINUTES` (5) y se puede cancelar. Candado completo opcional en las sesiones por tiempo (`TIMED_LOCK`, desactivado por defecto). | ✅ usuario, **con supuestos S1, S2 y S3 por confirmar** | S1: el retraso también aplica a la sesión indefinida y a desactivar la Concentración. S2: pedir una sesión por tiempo con una indefinida en curso la convierte, conservando los pases. S3: como el Mac casi nunca se apaga (duerme), una sesión indefinida puede durar días, así que el contador de pases se reiniciaría cada día. → [fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#supuestos-que-tomé-y-el-usuario-debe-confirmar) |
 | D11 | Sesión indefinida **automática al encender** (`AUTOSTART_AT_BOOT`, **activada por defecto**). Termina al apagar el Mac. | ✅ usuario | El fin se detecta al **siguiente arranque**, con `kern.bootsessionuuid`, que es más fiable que engancharse al apagado |
 | D12 | Interfaz v1: **app de barra de menús en Swift**. La "experiencia asombrosa" se investiga y se pule después (Fase 6). | ✅ usuario | → [fase 5](docs/fases/fase-5-app-barra-de-menus.md) |
+| D13 | **Archivos de código con una sola responsabilidad y unas 100 líneas como máximo (150 es inaceptable).** Lo comprueba `tests/check-length.zsh`. | ✅ usuario | Permite depurar a mano. El motor se divide en `bin/guardian` (entrada) + módulos en `lib/`. Como el motor corre como root, los módulos se cargan solo desde una ruta fija de root. → [fase 1](docs/fases/fase-1-motor.md#regla-de-tamaño-d13-requisito-del-usuario) |
 
 ## Fases
 
@@ -84,9 +85,9 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 
 ### Fase 1: motor de bloqueo
 - [ ] 1.1 Crear `blocklists/*.txt` a partir de [04-dominios.md](docs/investigacion/04-dominios.md): los 10 grupos de D6.
-- [ ] 1.2 Escribir `tests/run.zsh` y el fixture (las pruebas primero).
-- [ ] 1.3 Escribir `bin/guardian` hasta que pasen las pruebas.
-- [ ] 1.4 Escribir `install.sh` y `uninstall.sh`.
+- [ ] 1.2 Escribir las pruebas primero: una por módulo en `tests/`, el fixture y `check-length.zsh` (D13).
+- [ ] 1.3 Escribir `bin/guardian` y los módulos de `lib/` hasta que pasen las pruebas.
+- [ ] 1.4 Escribir `install.sh` (con sus pasos en `install/`) y `uninstall.sh`.
 - [ ] 1.5 **Usuario:** revisar los scripts y ejecutar `sudo ./install.sh`.
 - [ ] 1.6 **Usuario:** verificación manual (checklist en la especificación, incluidos YouTube Studio, WhatsApp Web y Pinterest).
 
@@ -170,3 +171,16 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
   - Comandos renombrados de `on`/`off` a `start`/`stop`.
   - La especificación del pase se integró en la Fase 4 (sesiones y tiempo).
   - La Fase 0 (Unhook) se eliminó.
+
+### 2026-10-29 · Sesión 1 (continuación): regla de tamaño
+- **Requisito del usuario (D13):** archivos de código de una sola responsabilidad, con unas 100 líneas como máximo; 150 es inaceptable.
+- **Aplicado:**
+  - En CLAUDE.md, como regla para todos los agentes.
+  - En las especificaciones de las Fases 1, 3, 4 y 5, con la lista de módulos de cada una.
+- **Consecuencia de seguridad:** el motor ahora carga módulos siendo root. Por eso solo se cargan desde `/usr/local/libexec/efficiency-guardian/lib` (de root) y el instalador verifica toda la cadena de permisos.
+- **Aclaración del usuario:** pensaba sobre todo en la interfaz (Swift), y aceptaba un motor de un solo archivo si la seguridad lo exigía.
+- **Se mantiene la regla también para el motor**, porque la seguridad no lo exige:
+  - Un solo archivo depende de los mismos permisos de carpeta que los módulos.
+  - La carga desde una ruta fija ya cubre la diferencia.
+  - El motor crecerá a unas 500–600 líneas con la Fase 4 (estimación), justo donde más importa poder depurar a mano.
+  - No reabrir sin un motivo nuevo.
