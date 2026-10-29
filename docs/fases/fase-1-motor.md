@@ -13,7 +13,7 @@ Un comando `guardian start|stop|status` que añade o quita un bloque gestionado 
 - **Cada archivo de código tiene una sola responsabilidad y unas 100 líneas como máximo. 150 es inaceptable.**
 - Las líneas se cuentan con `wc -l`, incluidos comentarios y líneas en blanco.
 - **Objetivo:** que el usuario pueda depurar a mano leyendo un archivo de principio a fin.
-- **Cuenta como código:** `bin/`, `lib/`, `install*`, `uninstall*`, `tests/` y, más adelante, `app/`.
+- **Cuenta como código:** `bin/`, `lib/`, `install*`, `uninstall*`, `tests/`, `close-tabs/` y `tools/` (añadidos el 2026-10-29, Fase 3) y, más adelante, `app/`.
 - **No cuentan** los datos (`blocklists/*.txt`, `config.default`, `.plist`) ni la documentación (`*.md`).
 - `tests/check-length.zsh` **falla si un archivo de código llega a 150 líneas y avisa si pasa de 100**. Corre con el resto de las pruebas, así que el instalador no instala código que rompa la regla. (2026-10-29: antes decía "pasa de 150", lo que dejaba pasar un archivo de exactamente 150; se alineó con "150 es inaceptable".)
 

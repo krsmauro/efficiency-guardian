@@ -5,7 +5,7 @@
 #   - 150 líneas o más: ERROR. Las pruebas fallan y el instalador no instala.
 # Las líneas se cuentan con wc -l, incluidos comentarios y líneas en blanco.
 #
-# Cuenta como código: bin/, lib/, install*, uninstall*, tests/ y app/ (Swift).
+# Cuenta como código: bin/, lib/, close-tabs/, install*, uninstall*, tools/, tests/ y app/ (Swift).
 # No cuentan los datos (blocklists/, tests/fixtures/, .plist) ni la documentación (.md).
 #
 # Uso: check-length.zsh [carpeta del repositorio]   (por defecto, la de este archivo)
@@ -22,9 +22,11 @@ cd -- ${1:-${0:A:h:h}}
 files=(
   bin/*(N.)
   lib/**/*(N.)
+  close-tabs/**/*(N.)
   install*(N.)
   install/**/*(N.)
   uninstall*(N.)
+  tools/**/*(N.)
   tests/**/*~tests/fixtures/*(N.)
   app/**/*.swift(N.)
 )

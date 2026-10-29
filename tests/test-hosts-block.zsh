@@ -39,6 +39,12 @@ hosts_parse $'a\n\n'"$begin"$'\n0.0.0.0 x.com\n:: x.com\n'"$end"$'\nz\n'
 assert_eq "se conserva fuera del bloque" $'a\nz\n' "$HOSTS_OUTSIDE"
 assert_eq "cuenta 1 dominio" 1 $HOSTS_COUNT
 
+section "Lista de dominios del bloque (la usa close-tabs)"
+hosts_parse $'0.0.0.0 fuera.com\n\n'"$begin"$'\n0.0.0.0 a.com\n:: a.com\n0.0.0.0 www.b.com\n:: www.b.com\n'"$end"$'\n'
+assert_eq "solo los de dentro, en orden y sin repetir por la línea IPv6" "a.com www.b.com" "${HOSTS_DOMAINS[*]}"
+hosts_parse $'127.0.0.1\tlocalhost\n0.0.0.0 youtube.com\n'
+assert_eq "sin bloque: lista vacía (las líneas manuales no cuentan)" 0 $#HOSTS_DOMAINS
+
 section "Marcadores dañados (caso 5): error, para no tocar el archivo"
 typeset -A broken=(
   "inicio sin fin"   $'a\n'"$begin"$'\n0.0.0.0 x.com\n'

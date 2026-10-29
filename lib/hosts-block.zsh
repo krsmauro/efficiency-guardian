@@ -22,12 +22,14 @@ readonly END_LINE="$END_MARK <<<"
 #   HOSTS_OUTSIDE  lo que está fuera del bloque, sin la línea en blanco que lo precede
 #   HOSTS_ACTIVE   1 si hay bloque, 0 si no
 #   HOSTS_COUNT    cuántos dominios tiene el bloque
+#   HOSTS_DOMAINS  esos dominios, en orden (los usa close-tabs, Fase 3)
 # Si los marcadores están dañados (inicio sin fin, dos bloques...) devuelve 1 con
 # el motivo en HOSTS_ERROR: en ese caso no hay que tocar el archivo.
 hosts_parse() {
   local content=$1 i begin=0 end=0 begins=0 ends=0
   local -a lines=("${(@ps:\n:)content}") before after
   HOSTS_OUTSIDE=$content HOSTS_ACTIVE=0 HOSTS_COUNT=0 HOSTS_ERROR=
+  HOSTS_DOMAINS=()
 
   for (( i = 1; i <= $#lines; i++ )); do
     if [[ $lines[i] == "$BEGIN_MARK"* ]]; then begin=$i; begins=$(( begins + 1 )); fi
@@ -42,8 +44,9 @@ hosts_parse() {
   fi
 
   for (( i = begin + 1; i < end; i++ )); do
-    if [[ $lines[i] == '0.0.0.0 '* ]]; then HOSTS_COUNT=$(( HOSTS_COUNT + 1 )); fi
+    if [[ $lines[i] == '0.0.0.0 '* ]]; then HOSTS_DOMAINS+=("${lines[i]#0.0.0.0 }"); fi
   done
+  HOSTS_COUNT=$#HOSTS_DOMAINS
 
   # Cada línea de "before" iba seguida de un salto de línea; "after" conserva el suyo.
   before=("${(@)lines[1,begin-1]}")

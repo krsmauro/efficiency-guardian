@@ -21,8 +21,12 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 ## Estado actual
 
 - **Fases 1 y 4: código terminado** (pasos 1.1 a 1.4 y 4.0 a 4.3). El instalador instala las dos juntas. Faltan los pasos del usuario: 1.5 (instalar), 1.6 y 4.4 (verificación manual).
-- **Siguiente paso: el usuario** revisa los scripts y ejecuta `sudo ./install.sh` (1.5). Luego, la verificación manual de la [Fase 1](docs/fases/fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario) (1.6, con la nota sobre el retraso de `stop`) y la de la [Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#verificación-manual-tras-instalar-44-la-hace-el-usuario) (4.4). Después, la Fase 2 (manual, guiada) o el prototipo de la Fase 3.
-- **Código escrito:** motor `bin/guardian` + 20 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, y 534 comprobaciones en `tests/` (`zsh tests/run.zsh`, todas pasan). **Nada instalado todavía:** `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
+- **Fase 3: script escrito y probado sin navegadores** (3.2 y la mitad de 3.3). **No lo instala todavía el instalador:** quién lo ejecuta cada 15 s depende de la prueba de permisos 3.1.
+- **Siguientes pasos: el usuario**, en cualquier orden (son independientes):
+  - **El más importante:** revisar los scripts y ejecutar `sudo ./install.sh` (1.5). Luego, la verificación manual de la [Fase 1](docs/fases/fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario) (1.6, con la nota sobre el retraso de `stop`) y la de la [Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#verificación-manual-tras-instalar-44-la-hace-el-usuario) (4.4). Todo lo demás se apoya en el motor, que aún no se ha probado en el sistema real.
+  - La prueba de permisos de la Fase 3 (3.1), sin sudo: `zsh tools/try-close-tabs.zsh terminal` y luego `agent` ([instrucciones](docs/fases/fase-3-cerrar-pestanas.md#cómo-hacer-la-prueba-toolstry-close-tabszsh-sin-sudo)). Anotar a nombre de quién pide macOS el permiso.
+- **Después, el agente:** con el resultado de 3.1, el disparador de la Fase 3 (LaunchAgent + instalador, o la alternativa). O la Fase 2 (manual, guiada).
+- **Código escrito:** motor `bin/guardian` + 20 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, `close-tabs/` (Fase 3, 4 archivos), `tools/try-close-tabs.zsh`, y 597 comprobaciones en `tests/` (`zsh tests/run.zsh`, todas pasan). **Nada instalado todavía:** `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
 - **Última actualización:** 2026-10-29.
 
 ## Cómo usar este plan (agentes)
@@ -78,7 +82,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 |---|---|---|
 | 1 | Motor de bloqueo (`start`/`stop`/`status`, IPv6, grupos, instalador) | ✅ [lista](docs/fases/fase-1-motor.md) |
 | 2 | Concentración + Atajos como interruptor | ✅ [lista](docs/fases/fase-2-interruptor.md) (manual, guiada) |
-| 3 | Cerrar las pestañas abiertas de sitios bloqueados | 📝 [borrador](docs/fases/fase-3-cerrar-pestanas.md) (prototipo de permisos primero) |
+| 3 | Cerrar las pestañas abiertas de sitios bloqueados | 🔨 [script escrito](docs/fases/fase-3-cerrar-pestanas.md) (falta la prueba de permisos 3.1 y el disparador) |
 | 4 | Sesiones por tiempo e indefinidas, retraso al terminar, arranque automático, pases | ✅ [código escrito](docs/fases/fase-4-sesiones-y-tiempo.md) (falta 4.4) |
 | 5 | App de barra de menús en Swift (v1) | 📝 [borrador](docs/fases/fase-5-app-barra-de-menus.md) |
 | 6 | Investigar y pulir la experiencia de usuario | ⏳ se escribe al llegar |
@@ -96,9 +100,9 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 - [ ] 2.6 Matriz de pruebas.
 
 ### Fase 3: cerrar pestañas
-- [ ] 3.1 Prototipo: ¿un LaunchAgent puede controlar los navegadores (permisos de Automatización)?
-- [ ] 3.2 Pruebas de la lógica (host de una URL → cerrar o no).
-- [ ] 3.3 Script `close-tabs` (JXA) + LaunchAgent + instalador.
+- [ ] 3.1 **Usuario:** prueba de permisos con `tools/try-close-tabs.zsh` (preparada): ¿un LaunchAgent puede controlar los navegadores, a nombre de quién, y ve las ventanas privadas?
+- [x] 3.2 Pruebas de la lógica (host de una URL → cerrar o no) y del recorrido de pestañas, sin navegadores.
+- [ ] 3.3 Script `close-tabs` (JXA) ✅ + disparador (LaunchAgent o alternativa, según 3.1) + instalador.
 - [ ] 3.4 Verificación manual en los 5 navegadores.
 
 ### Fase 4: sesiones, tiempo y pases
@@ -230,3 +234,22 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
   - La prueba del candado dependía de un `sleep` fijo; ahora espera una señal.
   - **Sin verificar, añadido a 4.4:** si `kern.bootsessionuuid` cambia al despertar de un reposo profundo, la sesión sin fin terminaría con cada reposo.
 - **Siguiente:** el usuario instala y verifica (1.5, 1.6 y 4.4).
+
+### 2026-10-29 · Sesión 4: Fase 3, script de cerrar pestañas (3.2 y parte de 3.3)
+- **Por qué la Fase 3 y no otra cosa:** lo siguiente del plan era del usuario (instalar). La Fase 3 se puede escribir y probar sin root ni instalación. La Fase 5 se apoya en el motor instalado, y la Fase 2 es manual.
+- **Hecho:**
+  - `close-tabs/`: `close-tabs.zsh` lee el bloque con el módulo del motor y llama a cada navegador abierto con tres archivos JXA (`match.js`, `browser.js`, `run.js`). El más largo tiene 86 líneas.
+  - `hosts_parse` deja también la lista de dominios (`HOSTS_DOMAINS`).
+  - Pruebas de 534 a 597 comprobaciones. El JavaScript se ejecuta con el osascript real sobre un navegador de mentira, sin pedir permisos. Se rompió el código a propósito de 14 formas en una copia: todas fallaron.
+  - `tools/try-close-tabs.zsh` para la prueba de permisos 3.1 (la hace el usuario, sin sudo). Su modo LaunchAgent se ensayó con un close-tabs falso que no habla con navegadores.
+  - `check-length.zsh` y `test-syntax.zsh` cubren las carpetas nuevas. Los `.js` se compilan con `osacompile` sin ejecutarse.
+- **No hecho a propósito:** el LaunchAgent y su paso en el instalador. Dependen de 3.1, y el usuario aún no ha revisado el instalador actual: añadirle más antes de la primera instalación solo alarga esa revisión.
+- **Cambios respecto al borrador** (marcados en la [especificación](docs/fases/fase-3-cerrar-pestanas.md)):
+  - Un solo `browser.js` para los cinco navegadores, en vez de `chromium.js` y `safari.js`: usan los mismos nombres de AppleScript.
+  - `run.js` aparte, para poder probar `browser.js`.
+  - `lsappinfo` para saber si un navegador está abierto sin lanzar osascript.
+  - Propuesta: el LaunchAgent en `/Library/LaunchAgents` (de root), no en `~/Library`.
+- **Hallazgos:**
+  - **Trampa de zsh nueva:** `zsh -n` (solo revisar la sintaxis) **sí lee** los archivos de `"$(<archivo)"` cuando van como argumento de un comando (no en una asignación). Hizo fallar `test-syntax.zsh` con un archivo que no existía en ese momento. Solución: leerlos antes en una variable.
+  - **Trampa de zsh conocida, otra vez:** un patrón sin coincidencias (`rm $F/out-*`) aborta el comando entero. Se usa `(N)`.
+  - En la [especificación](docs/fases/fase-3-cerrar-pestanas.md#riesgos-a-verificar-primero-31-prueba-de-permisos-la-hace-el-usuario) se anota una consecuencia de seguridad a vigilar en 3.1: si el permiso queda a nombre de `osascript` o `zsh` en general, otros scripts en segundo plano también podrían controlar el navegador.

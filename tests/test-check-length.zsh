@@ -5,7 +5,7 @@
 source ${0:A:h}/assert.zsh
 
 fake=$T_TMP/repo
-mkdir -p $fake/{bin,lib,install,tests/fixtures/sub,blocklists}
+mkdir -p $fake/{bin,lib,close-tabs,tools,install,tests/fixtures/sub,blocklists}
 
 # make_file ruta número_de_líneas
 make_file() {
@@ -40,7 +40,8 @@ assert_contains "150 líneas: lo explica" "ERROR  lib/a.zsh: 150" "$OUT"
 make_file lib/a.zsh 10
 
 section "Qué cuenta como código"
-for code_file in bin/guardian install.sh install/x.zsh uninstall.sh tests/test-x.zsh; do
+for code_file in bin/guardian install.sh install/x.zsh uninstall.sh tests/test-x.zsh \
+                 close-tabs/x.js close-tabs/x.zsh tools/x.zsh; do
   make_file $code_file 150
   check
   assert_status "$code_file cuenta como código" 1 $ST "$OUT"
