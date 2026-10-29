@@ -1,10 +1,10 @@
-# Paso 4 del instalador: comprobar que nadie más que root puede modificar lo que
+# Paso 5 del instalador: comprobar que nadie más que root puede modificar lo que
 # se ejecuta como root. Con una sola carpeta escribible por el usuario, cualquier
 # programa suyo (incluido un malware) podría cambiar el motor y, gracias a la
-# regla de sudoers, obtener root sin contraseña.
+# regla de sudoers o al LaunchDaemon, obtener root sin contraseña.
 #
-# Si algo falla, se quita la regla de sudoers (si quedaba de una instalación
-# anterior) y se aborta antes de instalar una nueva.
+# Si algo falla, se quitan la regla de sudoers y el LaunchDaemon (si quedaban de
+# una instalación anterior) y se aborta antes de instalar los nuevos.
 
 # is_root_only ruta
 # 0 si es de root, no es un enlace y ni el grupo ni otros pueden escribirla.
@@ -23,8 +23,8 @@ install_verify() {
   local -a targets=(
     /usr/local $SBIN_DIR $ENGINE
     /usr/local/libexec $LIBEXEC_DIR $LIB_DIR $LIB_DIR/*(N)
-    /usr/local/etc $ETC_DIR $LISTS_DIR $LISTS_DIR/*(N)
-    $REAL_DATA_DIR
+    /usr/local/etc $ETC_DIR $CONFIG_INSTALLED $LISTS_DIR $LISTS_DIR/*(N)
+    $REAL_DATA_DIR $DAEMONS_DIR $PLIST_FILE
   )
 
   for target in $targets; do
@@ -36,7 +36,9 @@ install_verify() {
 
   if (( problems )); then
     rm -f -- $SUDOERS_FILE
-    die "instalación insegura: no hay regla de sudoers. Corrige los permisos y vuelve a ejecutar."
+    daemon_unload
+    rm -f -- $PLIST_FILE
+    die "instalación insegura: no hay regla de sudoers ni LaunchDaemon. Corrige los permisos y vuelve a ejecutar."
   fi
   say "   $#targets rutas revisadas: son de root y nadie más puede modificarlas."
 }

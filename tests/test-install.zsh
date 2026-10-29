@@ -1,10 +1,11 @@
 #!/bin/zsh -f
 # Pruebas de las partes del instalador que no necesitan root: la migración de
-# las líneas manuales antiguas, la regla de sudoers, la comprobación de
-# permisos y que las rutas coincidan con las del motor.
+# las líneas manuales antiguas, la regla de sudoers, el plist del LaunchDaemon,
+# la comprobación de permisos y que las rutas coincidan con las del motor.
 
 source ${0:A:h}/assert.zsh
-for file in lib/env.zsh lib/log.zsh lib/blocklist.zsh lib/hosts-block.zsh lib/hosts-write.zsh \
+for file in lib/env.zsh lib/log.zsh lib/config.zsh lib/config-check.zsh lib/blocklist.zsh \
+            lib/hosts-block.zsh lib/hosts-write.zsh \
             install/paths.zsh install/verify.zsh install/migrate-hosts.zsh install/sudoers.zsh; do
   source $REPO/$file
 done
@@ -39,14 +40,30 @@ hosts_with_block $'a\n' youtube.com www.youtube.com
 legacy_filter "$REPLY"
 assert_eq "ninguna línea del bloque cuenta como antigua" 0 $#LEGACY_LINES
 
-section "Regla de sudoers"
-assert_eq "solo start y stop, con argumentos exactos" \
-  "mauro ALL=(root) NOPASSWD: /usr/local/sbin/guardian start, /usr/local/sbin/guardian stop" \
+section "Regla de sudoers (desde la configuración)"
+config_load $REPO/config.default
+g=/usr/local/sbin/guardian
+assert_eq "argumentos exactos: start, cada duración, stop, cancel-stop y pass" \
+  "mauro ALL=(root) NOPASSWD: $g start, $g start 25, $g start 50, $g start 90, $g stop, $g cancel-stop, $g pass" \
   "$(sudoers_rule mauro | grep -v '^#')"
 sudoers_rule mauro > $T_TMP/sudoers
 assert_true "visudo la acepta" visudo -c -q -f $T_TMP/sudoers
+assert_false "status y reconcile no están" grep -qE "status|reconcile" $T_TMP/sudoers
+print -r -- "TIMED_PRESETS=15,120" > $T_TMP/config
+config_load $T_TMP/config
+assert_contains "otras duraciones" "$g start, $g start 15, $g start 120, $g stop" "$(sudoers_rule mauro)"
 
-section "Comprobación de permisos (paso 4)"
+section "Plist del LaunchDaemon"
+plist=$REPO/launchd/$DAEMON_LABEL.plist
+assert_true "es un plist válido" plutil -lint -s $plist
+assert_eq "Label" $DAEMON_LABEL "$(plutil -extract Label raw -o - $plist)"
+assert_eq "ejecuta el motor instalado" $ENGINE "$(plutil -extract ProgramArguments.0 raw -o - $plist)"
+assert_eq "con reconcile" reconcile "$(plutil -extract ProgramArguments.1 raw -o - $plist)"
+assert_eq "y nada más" 2 "$(plutil -extract ProgramArguments raw -o - $plist)"
+assert_eq "cada 30 s" 30 "$(plutil -extract StartInterval raw -o - $plist)"
+assert_eq "y al cargarse (al arrancar el Mac)" true "$(plutil -extract RunAtLoad raw -o - $plist)"
+
+section "Comprobación de permisos (paso 5)"
 touch $T_TMP/mine
 ln -s /usr/bin/true $T_TMP/link
 assert_true "un archivo del sistema es seguro" is_root_only /usr/bin/true
@@ -58,5 +75,7 @@ assert_false "lo que no existe no lo es" is_root_only $T_TMP/no-existe
 section "Las rutas coinciden con las del motor"
 assert_eq "módulos (bin/guardian)" "$LIB_DIR" "$(sed -n 's/^readonly INSTALLED_LIB=//p' $REPO/bin/guardian)"
 assert_eq "listas (lib/env.zsh)" "$LISTS_DIR" "$REAL_BLOCKLIST_DIR"
+assert_eq "configuración (lib/env.zsh)" "$CONFIG_INSTALLED" "$REAL_CONFIG_FILE"
+assert_eq "configuración y listas (bin/guardian)" "$ETC_DIR" "$(sed -n 's/^readonly INSTALLED_ETC=//p' $REPO/bin/guardian)"
 
 finish

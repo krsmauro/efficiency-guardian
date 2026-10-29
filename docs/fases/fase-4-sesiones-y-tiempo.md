@@ -1,6 +1,6 @@
 # Fase 4: sesiones, tiempo y pases
 
-> Borrador de especificación (2026-10-28), con los requisitos del usuario todavía frescos. Requiere las Fases 1 y 2. Conviene tener la [Fase 3](fase-3-cerrar-pestanas.md): sin ella, una pestaña abierta sigue reproduciendo cuando vence un pase o termina una sesión.
+> **Código escrito el 2026-10-29 (pasos 4.0 a 4.3).** Falta la verificación manual del usuario (4.4). La especificación original es del 2026-10-28; los cambios hechos al implementar están marcados con **(cambio)** y su motivo. Requiere la Fase 1 (y conviene la 2). Conviene tener la [Fase 3](fase-3-cerrar-pestanas.md): sin ella, una pestaña abierta sigue reproduciendo cuando vence un pase o termina una sesión.
 
 ## Requisitos del usuario (2026-10-28)
 
@@ -16,47 +16,44 @@
 4. **Pases** (D5): 5 min por defecto, máximo 3 por sesión, ambos configurables. Por defecto solo para YouTube.
 5. **Todo configurable.**
 
-## Supuestos que tomé y el usuario debe confirmar
+## Supuestos: confirmados por el usuario el 2026-10-29
 
-- **S1:** el retraso al terminar se aplica a **todas** las sesiones, también a la indefinida y a "desactivar la Concentración". El motivo del usuario ("darle tiempo de desistir") aplica igual. Para excluir la indefinida bastaría otra clave en la configuración.
-- **S2:** si hay una sesión indefinida en curso (algo habitual, con el arranque automático) y se pide una **por tiempo**, la indefinida **se convierte** en una por tiempo que termina dentro de N minutos.
-  - **Conserva el contador de pases**, para que no sirva para reiniciarlos.
-  - Si se pidiera una por tiempo con otra por tiempo ya en curso, se rechaza: no se puede acortar una sesión con candado.
-- **S3 (punto débil detectado):** un MacBook casi nunca se apaga: al cerrar la tapa **duerme**. Una sesión indefinida que "termina al apagar" puede durar **días**, y "3 pases por sesión" se convertiría en 3 pases por semana.
-  - **Propuesta:** en las sesiones indefinidas, el contador de pases **se reinicia cada día** a una hora configurable (`PASS_RESET_HOUR=4`, las 4 a. m.). La sesión sigue siendo la misma.
-  - Alternativa: que la sesión indefinida termine también a esa hora y arranque otra.
-  - Confirmar con el usuario antes de implementar.
+- **S1, confirmado:** el retraso al terminar se aplica a **todas** las sesiones, también a la indefinida y a "desactivar la Concentración".
+- **S2, confirmado:** si hay una sesión indefinida en curso y se pide una **por tiempo**, la indefinida **se convierte** en una por tiempo que termina dentro de N minutos. Al terminar, **se desbloquea** ("50 min" significa "trabajo 50 minutos más y quedo libre").
+  - Conserva el contador de pases y el pase en curso, para que no sirva para reiniciarlos.
+  - Anula una terminación pendiente.
+  - **(cambio)** Nunca termina antes que `STOP_DELAY_MINUTES`: si no, una duración corta (por ejemplo `TIMED_PRESETS=1`) sería un atajo para saltarse el retraso.
+  - Con otra por tiempo ya en curso, se rechaza: no se puede acortar una sesión con candado.
+- **S3, descartado:** el supuesto era que el Mac casi nunca se apaga. **Resultó falso:** el historial (`last reboot shutdown`) muestra que el Mac se apaga casi todas las noches y arranca cada mañana (36 días, del 23-09 al 29-10; el mayor tiempo encendido fue de unas 26 h). La sesión automática ya dura un día y los pases se reinician solos cada día. **No hay reinicio a las 4 a. m.** (`PASS_RESET_HOUR` no existe). Si el uso cambia (el Mac pasa días dormido), se reconsidera.
 
 ## Configuración: `/usr/local/etc/efficiency-guardian/config` (`root:wheel 644`)
 
-```
-# Sesiones por tiempo: duraciones ofrecidas, en minutos (cada una entre 1 y 480)
-TIMED_PRESETS=25,50,90
-# Candado completo: yes = una sesión por tiempo no se puede terminar antes de la hora
-TIMED_LOCK=no
-# Retraso al pedir terminar, en minutos (0 = inmediato; máximo 60)
-STOP_DELAY_MINUTES=5
-# Sesión indefinida automática al encender el Mac
-AUTOSTART_AT_BOOT=yes
-# Pases
-PASS_MINUTES=5
-PASS_MAX_PER_SESSION=3
-PASS_GROUPS=youtube
-```
+El repositorio trae [config.default](../../config.default), con un comentario por clave. El instalador la copia **solo si no existe**: nunca sobrescribe la del usuario.
 
-- **Se lee línea por línea con validación estricta:** números enteros dentro de rango, `yes`/`no`, grupos que existen en `blocklists/`.
-- **Nunca usar `source` sobre ese archivo:** ejecutaría su contenido como código root.
-- Cambiar la configuración requiere `sudo`. Es fricción deseada: aflojar las reglas en un momento de debilidad cuesta un paso más.
-- El repositorio trae `config.default`, y el instalador la copia solo si no existe.
-- **Si se cambia `TIMED_PRESETS`, hay que volver a ejecutar el instalador,** que regenera la regla de sudoers (ver abajo).
+| Clave | Por defecto | Valores válidos |
+|---|---|---|
+| `TIMED_PRESETS` | `25,50,90` | Números del 1 al 480, separados por comas (se quitan los repetidos) |
+| `TIMED_LOCK` | `no` | `yes` / `no` |
+| `STOP_DELAY_MINUTES` | `5` | 0 a 60 (0 = inmediato) |
+| `AUTOSTART_AT_BOOT` | `yes` | `yes` / `no` |
+| `PASS_MINUTES` | `5` | 1 a 60 |
+| `PASS_MAX_PER_SESSION` | `3` | 0 a 20 (0 = sin pases) |
+| `PASS_GROUPS` | `youtube` | Grupos de `blocklists/`, en minúsculas, separados por comas |
+
+- **Se lee línea por línea, nunca con `source`** (ejecutaría su contenido como root). Formato estricto: `CLAVE=valor`, el valor solo admite letras, números, comas y guiones, y los comentarios van en su propia línea. Una clave desconocida, repetida o un valor inválido es un error: **el motor no hace nada** hasta que se corrija, y el instalador se niega a empezar.
+- **(cambio, tras la revisión)** Que los grupos de `PASS_GROUPS` existan **no** se comprueba al leer la configuración, sino en el instalador y en `pass`. Si no, borrar una lista dejaría sin funcionar `stop`, `cancel-stop` y `reconcile`.
+- Los números no admiten ceros a la izquierda (`05` es un error).
+- **(cambio)** Los grupos deben ir en minúsculas: el disco del Mac no distingue mayúsculas, así que `Youtube` pasaría la comprobación del archivo pero no coincidiría con ningún grupo.
+- Cambiar la configuración requiere `sudo`. Es fricción deseada.
+- **Si se cambia `TIMED_PRESETS`, hay que volver a ejecutar el instalador,** que regenera la regla de sudoers.
 
 ## Estado: `/var/db/efficiency-guardian/state` (`root:wheel 644`)
 
-La carpeta pasa a ser `755` y las copias de seguridad quedan en `600`. El estado debe ser legible sin root, porque la app de la Fase 5 lo lee.
+La carpeta pasa a ser `755` (el instalador la cambia; en la Fase 1 era `700`) y las copias de seguridad siguen en `600`. El estado debe ser legible sin root, porque la app de la Fase 5 lo lee.
 
 ```
 SESSION=none|indefinite|timed
-SESSION_STARTED=<epoch>
+SESSION_STARTED=<epoch o 0>
 SESSION_ENDS=<epoch o 0>      # solo en sesiones por tiempo
 BOOT_ID=<kern.bootsessionuuid>
 STOP_AT=<epoch o 0>           # terminación pendiente
@@ -64,25 +61,37 @@ PASSES_USED=<n>
 PASS_UNTIL=<epoch o 0>
 ```
 
-- `BOOT_ID` sale de `sysctl -n kern.bootsessionuuid`, que cambia en cada arranque (verificado el 2026-10-28). Sirve para saber que el Mac **se apagó o reinició**.
-- Escribir el estado de forma atómica (temporal + `mv`), igual que hosts.
-- **Dos llamadas a la vez** (el LaunchDaemon cada 30 s y un atajo o la app) pueden leer el mismo estado y pisarse al escribir (por ejemplo, perder un pase contado). Hace falta un candado alrededor de "leer, decidir, escribir": `/usr/bin/lockf` o `/usr/bin/shlock`, ambos en macOS (verificado el 2026-10-29). En la Fase 1 no hacía falta: dos `start` a la vez escriben exactamente lo mismo.
-- **Notas de la Fase 1 que aplican aquí** (ver [fase 1](fase-1-motor.md)): la primera línea `#!/bin/zsh -f`, la trampa de zsh con expansiones dentro de un `if`, y que el registro se lee con `/usr/bin/log` (no `log`).
+- `BOOT_ID` sale de `sysctl -n kern.bootsessionuuid`, que cambia en cada arranque (verificado el 2026-10-28).
+- **Se lee línea por línea con validación estricta**, igual que la configuración. Se escribe de forma atómica (temporal + `mv`) y **solo si cambió**: así `reconcile`, cada 30 s, no reescribe el archivo sin motivo.
+- **(cambio) Estado dañado:** no detiene el motor. Se avisa, se registra y se empieza de nuevo como la primera vez (ver abajo).
+- **(cambio) Primera vez (sin estado):** se toma el arranque actual y se **conserva lo que haya en hosts**: con bloque (por ejemplo, tras actualizar desde la Fase 1), una sesión sin fin; sin bloque, sin sesión. Así **instalar no activa ni quita el bloqueo**. Tratar "sin estado" como un arranque nuevo habría activado el bloqueo nada más instalar.
+- **Candado:** dos llamadas a la vez (el LaunchDaemon y un atajo) podrían leer el mismo estado y pisarse al escribir. Los comandos que escriben toman un candado (`DATA_DIR/lock`) **antes de leer**. **(cambio)** Se usa `zsystem flock`, del módulo `zsh/system` que trae el zsh de macOS, en vez de `lockf`: sin procesos externos, y se suelta solo al terminar el proceso, también con error (verificado el 2026-10-29). Espera hasta 10 s. `status` no lo usa.
+- **Notas de la Fase 1 que aplican aquí:** la primera línea `#!/bin/zsh -f`, la trampa de zsh con expansiones dentro de un `if`, y que el registro se lee con `/usr/bin/log`. **Trampa nueva:** un `=~` dentro de una función llamada pisa `$match` de quien la llamó (pasó en `state.zsh`; las pruebas lo detectaron).
 
-## Módulos nuevos (regla D13: una responsabilidad y unas 100 líneas como máximo por archivo)
+## Módulos (regla D13)
+
+Todos en `lib/`, con una responsabilidad cada uno; los más largos (`blocklist.zsh` y `session.zsh`) tienen 90 líneas.
 
 | Archivo | Responsabilidad |
 |---|---|
-| `lib/config.zsh` | Leer y validar la configuración, sin `source` |
-| `lib/state.zsh` | Leer y escribir el estado de forma atómica |
-| `lib/clock.zsh` | Hora actual y `BOOT_ID`, reales o falsos en pruebas |
-| `lib/session.zsh` | Crear, convertir y terminar sesiones |
-| `lib/cmd-start.zsh`, `lib/cmd-stop.zsh`, `lib/cmd-cancel-stop.zsh`, `lib/cmd-pass.zsh`, `lib/cmd-status.zsh`, `lib/cmd-reconcile.zsh` | Un archivo por subcomando |
-| `lib/status-json.zsh` | Salida JSON para la app (separada del texto para personas) |
-| `install/launchdaemon.zsh` | Instalar y cargar el LaunchDaemon |
-| `tests/test-<módulo>.zsh` | Un archivo de pruebas por módulo |
+| `clock.zsh` | `NOW` y `BOOT_ID`, reales o falsos en pruebas; formato `HH:MM` |
+| `config.zsh` | Leer la configuración línea por línea, sin `source` |
+| `config-check.zsh` | Validar sus valores (rangos, `yes`/`no`, grupos) |
+| `state.zsh` | Leer, validar y escribir el estado de forma atómica |
+| `lock.zsh` | El candado (`zsystem flock`) |
+| `session.zsh` | Crear, convertir y terminar sesiones, y aplicar el paso del tiempo (`session_advance`) |
+| `engine.zsh` | El ciclo común de los comandos: empezar (candado, configuración, estado) y terminar (calcular hosts, guardar estado, escribir hosts, registrar) |
+| `cmd-start.zsh`, `cmd-stop.zsh`, `cmd-cancel-stop.zsh`, `cmd-pass.zsh`, `cmd-status.zsh`, `cmd-reconcile.zsh` | Un archivo por subcomando |
+| `status-json.zsh` | Salida JSON para la app |
+| `cli.zsh` | Validar los argumentos y llamar al subcomando (antes estaba en `bin/guardian`) |
 
-El paso 5 de `reconcile` ("aplicar") es lógica compartida y vive en `lib/session.zsh` o en su propio `lib/apply.zsh` si no cabe.
+Cambios en módulos de la Fase 1:
+- `blocklist_load` acepta grupos a omitir (los del pase en curso) y solo lee archivos normales (`*.txt(N.)`: ni enlaces ni FIFOs).
+- `warn` y `err` (y por tanto `die`) también escriben en el registro siendo root: el LaunchDaemon no tiene terminal.
+- La carpeta de datos se crea con `755`.
+- `bin/guardian`, siendo root, comprueba además que `/usr/local/etc`, la carpeta de la configuración, la de las listas y el archivo de configuración sean solo de root y no sean enlaces. Si no, otro programa podría enlazarlos a un archivo privado y leerlo en los mensajes de error, o aflojar las reglas sin sudo.
+
+**Cómo fluye un comando:** `engine_begin` → la lógica del comando cambia el estado en memoria → `engine_commit`. **hosts siempre se deriva del estado:** `engine_commit` calcula el hosts que corresponde y **todo lo que puede fallar falla antes de escribir nada**; luego guarda el estado y, por último, reescribe hosts si cambió. Si una escritura falla a medias, el siguiente `reconcile` lo arregla.
 
 ## Comandos
 
@@ -92,47 +101,88 @@ El paso 5 de `reconcile` ("aplicar") es lógica compartida y vive en `lib/sessio
 | `guardian start <min>` | Sí | `<min>` debe estar en `TIMED_PRESETS`. Sin sesión: crea una **por tiempo**. Con una indefinida: la convierte (S2). Con otra por tiempo: error. |
 | `guardian stop` | Sí | Sin sesión: nada. Por tiempo con `TIMED_LOCK=yes`: error "termina a las HH:MM". Con `STOP_DELAY_MINUTES=0`: termina ya. Si no: fija `STOP_AT = ahora + retraso`. Si ya había una terminación pendiente, no la alarga ni la acorta. |
 | `guardian cancel-stop` | Sí | Borra `STOP_AT`: "seguir trabajando". |
-| `guardian pass` | Sí | Requiere sesión, ningún pase en curso y `PASSES_USED < PASS_MAX_PER_SESSION`. Quita de hosts los grupos de `PASS_GROUPS`, fija `PASS_UNTIL` y suma 1 a `PASSES_USED`. Si no se cumple, error con un mensaje claro ("No quedan pases en esta sesión (3/3)"). Se puede usar durante una terminación pendiente. |
-| `guardian status [--json]` | No | Texto para personas, o JSON para la app. Incluye tipo de sesión, hora de fin, terminación pendiente, pase en curso y pases restantes. |
-| `guardian reconcile` | Sí (solo lo llama el LaunchDaemon) | Ver el algoritmo de abajo. |
+| `guardian pass` | Sí | Requiere sesión, ningún pase en curso y `PASSES_USED < PASS_MAX_PER_SESSION`. Quita de hosts los grupos de `PASS_GROUPS`, fija `PASS_UNTIL` y suma 1 a `PASSES_USED`. Si no se cumple, error con un mensaje claro ("no quedan pases en esta sesión (3/3)"). Se puede usar durante una terminación pendiente. |
+| `guardian status [--json]` | No | Texto para personas, o JSON para la app. **(cambio)** Muestra la sesión como la dejaría `reconcile` ahora mismo (si ya venció, dice que terminó), sin escribir nada; "Bloqueo" es lo que hay en hosts en ese instante. |
+| `guardian reconcile` | Sí (solo lo llama el LaunchDaemon) | Ver abajo. Si no cambió nada, no escribe nada ni dice nada. |
 
-**Terminar una sesión** (pasos comunes): quitar el bloque de hosts, `SESSION=none`, y poner a cero `STOP_AT`, `PASS_UNTIL` y `SESSION_ENDS`.
+- **Terminar una sesión:** quitar el bloque de hosts, `SESSION=none`, y poner a cero `SESSION_STARTED`, `SESSION_ENDS`, `STOP_AT`, `PASSES_USED` y `PASS_UNTIL`.
+- **Todos los comandos aplican primero el paso del tiempo** (`session_advance`), no solo `reconcile`: así nunca actúan sobre una sesión que ya terminó.
+- **(cambio) Listas dañadas con un bloque ya puesto:** el bloque se deja como está y se avisa, en vez de fallar. Si no, `stop` y `cancel-stop` serían imposibles con las listas dañadas (con el retraso, la sesión sigue y habría que reconstruir el bloque). Sin bloque puesto, `start` sí falla sin tocar nada.
+- **Uso incorrecto** (argumentos que no existen, `start 025`, `start abc`): sale con 2 y muestra el uso.
 
-## `reconcile`: el corazón del tiempo
+`status --json` (todas las horas son epoch; 0 = no hay):
 
-Lo ejecuta un LaunchDaemon cada 30 s y al arrancar el Mac. En orden:
+```json
+{
+  "now": 1800000060, "session": "timed", "session_started": 1800000000, "session_ends": 1800003000,
+  "stop_at": 0, "pass_until": 1800000360, "passes_used": 1, "passes_max": 3, "pass_minutes": 5,
+  "pass_groups": ["youtube"], "stop_delay_minutes": 5, "timed_lock": false,
+  "timed_presets": [25, 50, 90], "autostart_at_boot": true, "blocking": true, "blocked_domains": 71
+}
+```
+(La salida real tiene una clave por línea.)
 
-1. **¿Arranque nuevo?** (`BOOT_ID` guardado ≠ el actual)
-   - Si la sesión era **indefinida**, se termina: "termina con el apagado".
-   - Si era **por tiempo**, **continúa** si `SESSION_ENDS` aún no ha pasado. La hora es la del reloj, así que reiniciar no salta un candado.
+## El paso del tiempo (`session_advance`) y `reconcile`
+
+`reconcile` lo ejecuta un LaunchDaemon cada 30 s y al arrancar el Mac. En orden:
+
+1. Si `STOP_AT > 0` y ya pasó, terminar la sesión.
+2. Si la sesión es por tiempo y `SESSION_ENDS` ya pasó, terminarla.
+3. Si `PASS_UNTIL > 0` y ya pasó, ponerlo a 0.
+4. **¿Arranque nuevo?** (`BOOT_ID` guardado ≠ el actual)
+   - Si la sesión es **indefinida**, se termina: "termina con el apagado".
+   - Si es **por tiempo**, continúa: la hora es la del reloj, así que reiniciar no salta un candado.
    - Guardar el `BOOT_ID` nuevo.
    - Si queda sin sesión y `AUTOSTART_AT_BOOT=yes`, crear una **indefinida nueva** con el contador a 0.
-2. Si `STOP_AT > 0` y ya pasó, terminar la sesión.
-3. Si la sesión es por tiempo y `SESSION_ENDS` ya pasó, terminarla.
-4. Si `PASS_UNTIL > 0` y ya pasó, ponerlo a 0.
-5. **Aplicar:** el bloque deseado es "todos los grupos, menos `PASS_GROUPS` si hay un pase en curso", o vacío si no hay sesión. Reescribir hosts **solo si es distinto**. Esto también restaura el bloque si alguien editó hosts a mano.
+5. **Aplicar:** el bloque deseado es "todos los grupos, menos `PASS_GROUPS` si hay un pase en curso", o ninguno si no hay sesión. Reescribir hosts **solo si es distinto**. Esto también restaura el bloque si alguien editó hosts a mano.
+
+**(cambio)** El arranque nuevo va **después** de los vencimientos (en la especificación original iba primero). Si una sesión por tiempo venció con el Mac apagado, debe terminar antes de decidir el arranque automático; si no, ese día no habría sesión automática.
 
 ## LaunchDaemon
 
-- **Archivo:** `/Library/LaunchDaemons/com.efficiency-guardian.reconcile.plist` (`root:wheel 644`).
+- **Archivo:** [launchd/com.efficiency-guardian.reconcile.plist](../../launchd/com.efficiency-guardian.reconcile.plist), instalado en `/Library/LaunchDaemons/` (`root:wheel 644`).
 - **Contenido:** `ProgramArguments = [/usr/local/sbin/guardian, reconcile]`, `StartInterval = 30`, `RunAtLoad = true`.
 - **Por qué así:** `WatchPaths` no es fiable ([02](../investigacion/02-integracion-macos.md#opciones)), y un `sleep` en segundo plano no sobrevive a un reposo ni a un reinicio.
+- **Se carga** con `launchctl enable` + `launchctl bootstrap system <plist>` (con reintentos: justo después de un `bootout`, `bootstrap` a veces falla). Se descarga con `launchctl bootout system/com.efficiency-guardian.reconcile`.
+- **Los avisos y errores** van al registro del sistema (siendo root, `warn`, `err` y los errores tempranos de `bin/guardian` usan `logger`): un `reconcile` que falla deja rastro. Con un error persistente (configuración rota), son unas 2 líneas por minuto hasta que se corrija.
 - **Precisión:** los pases y los retrasos terminan con hasta 30 s de diferencia.
-- **Verificar:**
-  - Tras despertar el Mac, ¿launchd ejecuta el trabajo pendiente enseguida?
-  - Tras arrancar, ¿cuánto tarda en aplicar el arranque automático?
 
 ## Regla de sudoers
 
-El instalador la genera a partir de la configuración. Solo argumentos exactos, sin comodines:
+El instalador la genera a partir de `TIMED_PRESETS`. Solo argumentos exactos, sin comodines (en sudoers, un comando con argumentos solo admite esos argumentos exactos):
 
 ```
-<usuario> ALL=(root) NOPASSWD: /usr/local/sbin/guardian start, \
-  /usr/local/sbin/guardian start 25, /usr/local/sbin/guardian start 50, /usr/local/sbin/guardian start 90, \
-  /usr/local/sbin/guardian stop, /usr/local/sbin/guardian cancel-stop, /usr/local/sbin/guardian pass
+<usuario> ALL=(root) NOPASSWD: /usr/local/sbin/guardian start, /usr/local/sbin/guardian start 25, \
+  /usr/local/sbin/guardian start 50, /usr/local/sbin/guardian start 90, /usr/local/sbin/guardian stop, \
+  /usr/local/sbin/guardian cancel-stop, /usr/local/sbin/guardian pass
 ```
 
-`reconcile` **no** está en la regla: solo lo ejecuta launchd como root.
+`status` no está (se usa sin sudo) y `reconcile` tampoco: solo lo ejecuta launchd como root.
+
+## Instalador y desinstalador
+
+**`install.sh`** (pasos nuevos o cambiados):
+- **Paso 3 (nuevo):** valida la configuración (la instalada o, si no hay, `config.default`) contra las listas que se van a instalar, **antes de tocar nada**.
+- **Paso 4:** descarga el LaunchDaemon antes de copiar, para que no ejecute una mezcla de versiones, y copia también el plist y la configuración (si no existe).
+- **Paso 5:** la verificación de permisos incluye la configuración, `/Library/LaunchDaemons` y el plist. Si algo es inseguro, quita la regla de sudoers **y el LaunchDaemon**.
+- **Paso 6:** las líneas manuales antiguas (el aviso ahora dice que tampoco funcionaría un pase).
+- **Paso 7 (nuevo):** carga el LaunchDaemon. Va antes que la regla de sudoers para que, si la regla falla, el LaunchDaemon no quede descargado.
+- **Paso 8:** regla de sudoers desde la configuración.
+- Al final muestra `guardian status`.
+
+**`uninstall.sh`:** comprueba primero que los marcadores de hosts estén sanos (si no, no toca nada). Después quita el LaunchDaemon **y la regla de sudoers** (así ni `reconcile` ni un atajo pueden volver a poner el bloque), toma el candado del motor (espera a un `guardian` en curso), **quita el bloque en el acto** (sin el retraso: desinstalar ya exige sudo) y borra el estado, el motor, los módulos y las listas. **Conserva** las copias de seguridad y la configuración del usuario.
+
+**Ensayo sin root (2026-10-29):** con la misma técnica que en la Fase 1 (copia del repositorio apuntada a una carpeta temporal, con `install`, `chown`, `sudo`, `visudo`, `launchctl`, `logger`, `dscacheutil` y `killall` simulados). Funcionó todo:
+- Instalación nueva con migración de las 4 líneas manuales.
+- El motor instalado "como root": `reconcile`, `start`, `start 25`, `pass`, `stop` y `status`. Siendo root ignora `GUARDIAN_NOW`.
+- Reinstalación con una sesión en curso y `TIMED_PRESETS` cambiado: conserva la configuración, regenera la regla y recarga el LaunchDaemon. La sesión sigue.
+- Un módulo escribible por el grupo: el motor se niega a cargarlo, y el instalador quita la regla y el LaunchDaemon.
+- Desinstalación con una terminación pendiente: quita el bloque en el acto y conserva la configuración y las copias.
+- **Actualización desde la Fase 1** (commit `29b7ee0`) con el bloqueo activo: el bloqueo se conserva como sesión sin fin, y la carpeta de datos pasa de `700` a `755`.
+
+**Segundo ensayo, tras la revisión:** instalación nueva; reinstalación con la configuración rota (se detiene en el paso 3 sin tocar nada: el LaunchDaemon sigue cargado y el motor intacto); configuración convertida en un enlace (el motor se niega a ejecutarse); desinstalación. Todo bien.
+
+**Lo que no se pudo ensayar:** `launchctl` real (¿carga bien el plist? ¿hace falta el reintento?), `chown` real y la regla de sudoers en uso. Se comprueba en 4.4.
 
 ## Notificaciones
 
@@ -143,37 +193,53 @@ Los avisos de tiempo (queda 1 min de pase, la sesión terminó) son trabajo de l
 ## Huecos aceptados (conscientemente)
 
 - **El usuario es administrador:** puede cambiar la hora del sistema, editar la configuración con sudo o desinstalar. El objetivo es fricción, no seguridad.
-- **Con `AUTOSTART_AT_BOOT=no`, reiniciar termina una sesión indefinida sin esperar el retraso.** Con el valor por defecto (`yes`), reiniciar no sirve de atajo: arranca otra.
+- **Con `AUTOSTART_AT_BOOT=no`, reiniciar termina una sesión indefinida sin esperar el retraso.** Con el valor por defecto (`yes`), reiniciar no sirve para desbloquear: arranca otra.
+- **Reiniciar sí reinicia el contador de pases** (con el arranque automático, la sesión nueva empieza en 0). Cuesta un reinicio completo, así que se acepta.
 - **`stop` → esperar el retraso → `start` reinicia el contador de pases.** Cuesta 5 minutos, así que se acepta.
+- **(nuevo) Un comando rechazado no escribe nada**, ni siquiera el paso del tiempo. Por ejemplo, si un pase venció y se pide otro sin que queden, el pase vencido se vuelve a bloquear en el siguiente `reconcile` (hasta 30 s después), no en ese instante.
+- **(nuevo) Listas que se dañan durante un pase:** al vencer el pase, el bloque se deja como estaba (sin YouTube) hasta que se corrijan las listas. Dañarlas exige sudo y el instalador las valida, así que se acepta.
+- **(nuevo) `launchctl bootout` durante un `reconcile`** lo interrumpe: podría quedar un temporal `.hosts.guardian.*` en `/etc` o `.state.*` en la carpeta de datos. Inofensivo; se borra a mano.
+- **(nuevo) Las líneas manuales antiguas de hosts** (las 4 de YouTube) bloquean fuera del bloque gestionado: si el usuario no las quita al instalar, **un pase no desbloquea YouTube**. El instalador ofrece quitarlas (paso 6).
 
-## Pruebas (extender `tests/run.zsh`)
+## Pruebas
 
-Sin root, como en la Fase 1. Variables solo para pruebas, ignoradas si se ejecuta como root: `GUARDIAN_NOW` (reloj falso), `GUARDIAN_BOOT_ID`, `GUARDIAN_STATE_DIR` y `GUARDIAN_CONFIG`.
+Sin root, como en la Fase 1 (`zsh tests/run.zsh`). Variables solo para pruebas, ignoradas siendo root: `GUARDIAN_NOW` (reloj falso), `GUARDIAN_BOOT_ID` (arranque falso), `GUARDIAN_CONFIG` y, como en la Fase 1, `GUARDIAN_DATA_DIR` (donde vive el estado). **(cambio)** No hay `GUARDIAN_STATE_DIR`: el estado está en la carpeta de datos.
 
-**Casos mínimos:**
-- `start` crea una indefinida; un segundo `start` no reinicia el contador.
-- `start 50` sin sesión crea una por tiempo; `reconcile` en el minuto 49 no hace nada; en el 50, termina.
-- `start 37` (fuera de `TIMED_PRESETS`) produce error.
-- **Retraso al terminar:**
-  - `stop` deja la terminación pendiente.
-  - `reconcile` a los 4 min no termina; a los 5, sí.
-  - `cancel-stop` la anula.
-  - `start` durante la espera también la anula.
-- `TIMED_LOCK=yes`: `stop` es rechazado, pero el pase funciona.
-- **Arranque:**
-  - Un `BOOT_ID` nuevo termina la indefinida y, con arranque automático, crea otra con el contador a 0.
-  - La sesión por tiempo sobrevive si no ha vencido.
-- **Pases:**
-  - El pase quita solo `PASS_GROUPS` y vuelve al vencer.
-  - El 4.º es rechazado.
-  - Sin sesión, es rechazado.
-- S2: convertir una indefinida en una por tiempo conserva `PASSES_USED`.
-- Una configuración inválida (`PASS_MINUTES=abc`, `PASS_GROUPS=noexiste`, `STOP_DELAY_MINUTES=$(rm …)`) produce error sin ejecutar nada.
-- Si hosts fue editado a mano dentro de una sesión, `reconcile` lo restaura.
+| Archivo | Qué prueba |
+|---|---|
+| `test-config.zsh` | `config.default` coincide con el código; valores válidos e inválidos; nada se ejecuta (`$(…)`, comillas invertidas, subíndices aritméticos) |
+| `test-state.zsh` | Formato, permisos, escritura atómica, sin reescribir si no cambia, estado dañado |
+| `test-sessions.zsh` | `start`, `start <min>`, fuera de `TIMED_PRESETS`, S2 (conversión, rechazo, no salta el retraso) |
+| `test-stop.zsh` | Retraso al terminar, `cancel-stop`, `start` durante la espera, candado |
+| `test-pass.zsh` | Pase: qué grupos quita, vencimiento, límites, durante una terminación pendiente |
+| `test-pass-config.zsh` | Pase con listas dañadas (no se gasta), sin pases, varios grupos, contador de una sesión nueva |
+| `test-reconcile.zsh` | Arranques, arranque automático, primera vez sin estado, actualización desde la Fase 1, estado dañado, hosts editado a mano, sin cambios no escribe |
+| `test-status.zsh` | Texto y JSON (leído con `plutil`, que lo valida) |
+| `test-lock.zsh` | Un comando espera al otro; `status` no espera |
+| `test-install.zsh` | Regla de sudoers desde la configuración, plist del LaunchDaemon, rutas |
 
-## Medir para ajustar
+Los casos mínimos de la especificación original están todos cubiertos.
 
-Cada pase, inicio y terminación queda registrado con `logger -t efficiency-guardian`. Tras 1–2 semanas, revisar los registros para saber si 5 min × 3 pases y 5 min de retraso son los valores correctos:
+## Verificación manual tras instalar (4.4, la hace el usuario)
+
+Además de la [verificación de la Fase 1](fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario):
+
+- [ ] `sudo launchctl print system/com.efficiency-guardian.reconcile` muestra el trabajo cargado, con `run interval = 30 seconds`.
+- [ ] `sudo -n /usr/local/sbin/guardian start 25` funciona sin contraseña, y `sudo -n /usr/local/sbin/guardian start 37` la pide o falla.
+- [ ] **Retraso:** `sudo -n guardian stop` → `guardian status` dice "Terminación pendiente". A los 5 min (más hasta 30 s), YouTube vuelve a cargar sin hacer nada más.
+- [ ] **Seguir trabajando:** `stop` y luego `sudo -n guardian cancel-stop` → a los 6 min sigue bloqueado.
+- [ ] **Pase:** `sudo -n guardian pass` → YouTube carga (quizá haya que recargar); Facebook no. A los 5 min, una pestaña nueva de YouTube no carga (la abierta puede seguir: Fase 3).
+- [ ] **Reposo:** con una sesión de 25 min, cerrar la tapa 30 min. Al abrir, ¿cuánto tarda en desbloquearse? (¿launchd ejecuta el trabajo pendiente al despertar?)
+- [ ] **Reposo largo (una noche sin apagar):** antes, anotar `sysctl -n kern.bootsessionuuid` y la hora de inicio de `guardian status`. Al despertar, ¿son iguales? Si el identificador cambiara al despertar de un reposo profundo, la sesión sin fin terminaría con cada reposo (sin verificar; lo señaló la revisión).
+- [ ] **Reinicio:** con una sesión sin fin, reiniciar. Al entrar, `guardian status` muestra una sesión **nueva** (hora de inicio de ahora, pases 0 de 3). ¿Cuánto tarda en aparecer?
+- [ ] **Candado (opcional):** poner `TIMED_LOCK=yes` con sudo, `start 25` y `stop` → rechazado con la hora de fin. Volver a `no`.
+- [ ] El registro muestra los eventos: `/usr/bin/log show --last 1h --style compact --predicate 'process == "logger" AND eventMessage BEGINSWITH "efficiency-guardian"'`.
+
+Anota los resultados en la bitácora de [PLAN.md](../../PLAN.md).
+
+## Medir para ajustar (4.5)
+
+Cada pase, inicio, terminación, error y cambio de hosts queda registrado con `logger`. Tras 1–2 semanas, revisar los registros para saber si 5 min × 3 pases y 5 min de retraso son los valores correctos:
 ```
 /usr/bin/log show --last 7d --style compact --predicate 'process == "logger" AND eventMessage BEGINSWITH "efficiency-guardian"'
 ```

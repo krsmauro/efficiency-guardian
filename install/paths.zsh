@@ -8,6 +8,12 @@ readonly LIBEXEC_DIR=/usr/local/libexec/efficiency-guardian
 readonly LIB_DIR=$LIBEXEC_DIR/lib
 readonly ETC_DIR=/usr/local/etc/efficiency-guardian
 readonly LISTS_DIR=$ETC_DIR/blocklists
+readonly CONFIG_INSTALLED=$ETC_DIR/config
 
 # Sin punto en el nombre: sudo ignora en silencio los archivos de sudoers.d con punto.
 readonly SUDOERS_FILE=/etc/sudoers.d/efficiency-guardian
+
+# LaunchDaemon de la Fase 4: ejecuta "guardian reconcile" cada 30 s.
+readonly DAEMON_LABEL=com.efficiency-guardian.reconcile
+readonly DAEMONS_DIR=/Library/LaunchDaemons
+readonly PLIST_FILE=$DAEMONS_DIR/$DAEMON_LABEL.plist

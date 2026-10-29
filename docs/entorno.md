@@ -34,7 +34,11 @@ Verificado el **2026-10-29**:
 | `visudo -c -f archivo` | Funciona sin root: sirve para validar en las pruebas la regla de sudoers generada | Probado |
 | `/usr/local/libexec` | No existe: la crea el instalador | `ls -ld` |
 | `/usr/local/lib` | `root:wheel 775` (escribible por el grupo `wheel`). No lo usamos; por eso los módulos van en `/usr/local/libexec`. | `ls -la /usr/local` |
-| Candados para la Fase 4 | `/usr/bin/lockf` y `/usr/bin/shlock` existen | `ls -l` |
+| Candados para la Fase 4 | `/usr/bin/lockf` y `/usr/bin/shlock` existen. Al final se usó `zsystem flock` (abajo). | `ls -l` |
+| **Apagados y arranques** | **El Mac se apaga casi todas las noches** y arranca cada mañana: 36 días de historial (del 23-09 al 29-10), el mayor tiempo encendido fue de unas 26 h. Algunos días falta el registro de apagado (apagado forzado o sin batería), pero el arranque sí está. Desmiente el supuesto S3 de la Fase 4. | `last \| grep -E '^(reboot\|shutdown)'` |
+| Módulos de zsh | `zsh/datetime` (`EPOCHSECONDS`, `strftime`) y `zsh/system` (`zsystem flock`) están en `/usr/lib/zsh/5.9/zsh/`. `zsystem flock` exige que el archivo exista, espera con `-t segundos` (sale con 2 si se agota) y suelta el candado al terminar el proceso, también con `exit 1`. | Probado en la terminal |
+| `install -d` sobre una carpeta que ya existe | **Sí** le cambia los permisos (`700` → `755`): así el instalador de la Fase 4 corrige la carpeta de datos de la Fase 1 | Probado con una carpeta temporal |
+| `plutil` y JSON | `plutil -extract clave raw -o - archivo.json` lee JSON (y falla si es inválido). `plutil -lint` **no** acepta JSON. | Probado |
 
 ## Estado del bloqueo manual previo
 

@@ -51,6 +51,18 @@ for forbidden in accounts.youtube.com ACCOUNTS.YouTube.com studio.youtube.com up
 done
 assert_contains "explica el motivo" "nunca se bloquea" "$OUT"
 
+section "Grupos omitidos (los de un pase en curso)"
+reset_lists
+write_list a $'youtube.com\ncompartido.com\n'
+write_list b $'facebook.com\ncompartido.com\n'
+blocklist_load $lists a
+assert_eq "solo los dominios de b; el compartido sigue bloqueado" "facebook.com compartido.com" "${BLOCKED_DOMAINS[*]}"
+blocklist_load $lists a b
+assert_eq "omitirlos todos deja la lista vacía, sin error" 0 $#BLOCKED_DOMAINS
+write_list a $'you tube.com\n'
+OUT=$(blocklist_load $lists a 2>&1)
+assert_status "un grupo omitido se valida igual" 1 $? "$OUT"
+
 section "Listas que faltan o están vacías"
 reset_lists
 load

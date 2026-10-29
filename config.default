@@ -1,0 +1,30 @@
+# Configuración de efficiency-guardian.
+#
+# Instalada en /usr/local/etc/efficiency-guardian/config (de root). Para
+# cambiarla: sudo nano /usr/local/etc/efficiency-guardian/config
+# Cambiarla exige sudo a propósito: aflojar las reglas en un momento de
+# debilidad debe costar un paso más.
+#
+# Formato: CLAVE=valor, sin espacios. Los comentarios van en su propia línea.
+# Si una clave falta, se usa el valor de este archivo. Si un valor es
+# inválido, el motor se niega a hacer nada hasta que se corrija.
+
+# Duraciones de las sesiones por tiempo, en minutos (cada una entre 1 y 480).
+# Si las cambias, vuelve a ejecutar el instalador: regenera la regla de sudoers.
+TIMED_PRESETS=25,50,90
+
+# Candado completo: yes = una sesión por tiempo no se puede terminar antes de la hora.
+TIMED_LOCK=no
+
+# Retraso al pedir terminar, en minutos (0 = inmediato; máximo 60).
+# El bloqueo sigue ese tiempo por si cambias de opinión.
+STOP_DELAY_MINUTES=5
+
+# Sesión sin fin automática al encender el Mac (termina al apagarlo).
+AUTOSTART_AT_BOOT=yes
+
+# Pases: minutos que dura cada uno (1 a 60), cuántos por sesión (0 a 20) y
+# qué grupos de blocklists/ desbloquean, separados por comas.
+PASS_MINUTES=5
+PASS_MAX_PER_SESSION=3
+PASS_GROUPS=youtube

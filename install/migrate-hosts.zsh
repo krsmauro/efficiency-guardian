@@ -1,4 +1,4 @@
-# Paso 5 del instalador: quitar de /etc/hosts las líneas manuales antiguas que
+# Paso 6 del instalador: quitar de /etc/hosts las líneas manuales antiguas que
 # bloquean dominios de las listas (hoy, 4 líneas de YouTube; ver docs/entorno.md).
 # Si se quedan, "guardian stop" no desbloquearía esos sitios. Solo se quitan si
 # el usuario responde que sí, y antes se guarda una copia.
@@ -23,7 +23,7 @@ install_migrate_hosts() {
 
   say "   Estas líneas de $HOSTS_FILE bloquean a mano sitios que ahora gestiona guardian:"
   print -rl -- "     "${^LEGACY_LINES}
-  say "   Si se quedan, 'guardian stop' no desbloqueará esos sitios."
+  say "   Si se quedan, ni 'guardian stop' ni un pase desbloquearán esos sitios."
   read -r "answer?   ¿Quitarlas? [s/N] " < /dev/tty || true
   if [[ $answer != [sS]* ]]; then
     say "   Se dejan como están."

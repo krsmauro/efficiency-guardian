@@ -1,6 +1,7 @@
 #!/bin/zsh -f
 # Pruebas de punta a punta de los errores (casos 5-7 de la Fase 1 y uso incorrecto).
-# En todos, el motor debe salir con error y dejar el hosts intacto.
+# En todos, el motor debe salir con error y dejar el hosts intacto. Los errores
+# de la configuración están en test-config.zsh.
 
 source ${0:A:h}/assert.zsh
 source ${0:A:h}/e2e.zsh
@@ -39,15 +40,36 @@ done
 section "stop no depende de las listas"
 new_case
 run_guardian start
+cp $CASE/hosts $CASE/blocked
 CASE_LISTS=$T_TMP/lists-bad
 run_guardian stop
-assert_status "con listas dañadas, stop igual desbloquea" 0 $ST "$OUT"
+assert_status "con listas dañadas, stop funciona" 0 $ST "$OUT"
+assert_contains "avisa de las listas" "el bloqueo se queda como estaba" "$OUT"
+assert_same_file "durante el retraso, el bloque sigue igual" $CASE/blocked $CASE/hosts
+at_minute 5
+run_guardian reconcile
+assert_status "al cumplirse el retraso, reconcile funciona" 0 $ST "$OUT"
 assert_same_file "y deja el original" $CASE/original $CASE/hosts
+
+section "stop y reconcile no dependen de que exista la lista de PASS_GROUPS"
+new_case
+run_guardian start
+mkdir -p $T_TMP/lists-no-youtube
+cp $REPO/blocklists/*.txt $T_TMP/lists-no-youtube/
+rm $T_TMP/lists-no-youtube/youtube.txt
+CASE_LISTS=$T_TMP/lists-no-youtube
+run_guardian stop
+assert_status "sin youtube.txt, stop funciona" 0 $ST "$OUT"
+at_minute 5
+run_guardian reconcile
+assert_status "y reconcile también" 0 $ST "$OUT"
+assert_same_file "al cumplirse el retraso, hosts vuelve al original" $CASE/original $CASE/hosts
 
 section "Uso incorrecto"
 new_case
 inode=$(inode_of $CASE/hosts)
-for args in '' 'rm' 'start 25' 'status --json' 'START'; do
+for args in '' 'rm' 'START' 'start abc' 'start 025' 'start 25 50' 'start -5' \
+            'stop now' 'pass 2' 'status --text' 'reconcile x' 'cancel_stop'; do
   run_guardian ${=args}
   assert_status "${(qq)args} es rechazado" 2 $ST "$OUT"
   assert_contains "${(qq)args} muestra el uso" "Uso: guardian" "$OUT"

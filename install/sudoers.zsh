@@ -1,15 +1,23 @@
-# Paso 6 del instalador: la regla de sudoers que deja ejecutar "guardian start"
-# y "guardian stop" sin contraseña (para Atajos y, más adelante, la app).
+# Paso 8 del instalador: la regla de sudoers que deja ejecutar los comandos del
+# motor sin contraseña (para Atajos y, más adelante, la app).
 #
-# Solo esos dos comandos, con los argumentos exactos. "guardian status" no hace
-# falta (se usa sin sudo), y con cualquier otro argumento sudo pide contraseña.
+# Solo argumentos exactos, sin comodines: start, start <cada duración de
+# TIMED_PRESETS>, stop, cancel-stop y pass. Con cualquier otro argumento sudo
+# pide contraseña. "status" no hace falta (se usa sin sudo) y "reconcile" solo
+# lo ejecuta el LaunchDaemon. Por eso, si cambian las duraciones, hay que volver
+# a ejecutar el instalador.
 # Un error de sintaxis en sudoers puede dejar sudo inutilizable, así que la
 # regla se valida dos veces con visudo y, si algo falla, se borra.
 
-# sudoers_rule usuario → imprime el contenido del archivo.
+# sudoers_rule usuario → imprime el contenido del archivo (usa CFG_PRESETS, de config.zsh).
 sudoers_rule() {
-  print -r -- "# Generado por efficiency-guardian (install.sh). No editar a mano: vuelve a ejecutar el instalador."
-  print -r -- "$1 ALL=(root) NOPASSWD: $ENGINE start, $ENGINE stop"
+  local preset
+  local -a commands=("$ENGINE start")
+  for preset in $CFG_PRESETS; do commands+=("$ENGINE start $preset"); done
+  commands+=("$ENGINE stop" "$ENGINE cancel-stop" "$ENGINE pass")
+  print -r -- "# Generado por efficiency-guardian (install.sh) a partir de TIMED_PRESETS."
+  print -r -- "# No editar a mano: vuelve a ejecutar el instalador."
+  print -r -- "$1 ALL=(root) NOPASSWD: ${(j:, :)commands}"
 }
 
 install_sudoers() {
@@ -33,5 +41,5 @@ install_sudoers() {
     die "sudo no aceptó la configuración completa; se quitó la regla"
   fi
   say "   $SUDOERS_FILE"
-  say "   $user puede ejecutar sin contraseña: sudo -n $ENGINE start (o stop)"
+  say "   $user puede ejecutar sin contraseña: sudo -n $ENGINE start [${(j:|:)CFG_PRESETS}] | stop | cancel-stop | pass"
 }

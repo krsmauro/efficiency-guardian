@@ -11,11 +11,11 @@ hosts_read() {
 
 # hosts_backup_once contenido
 # La primera vez que el motor modifica hosts, guarda el contenido anterior en
-# DATA_DIR/hosts.original. Nunca la sobrescribe. Carpeta 700 y archivo 600.
+# DATA_DIR/hosts.original. Nunca la sobrescribe. El archivo es privado (600).
 hosts_backup_once() {
   local backup=$DATA_DIR/hosts.original
   if [[ -e $backup ]]; then return 0; fi
-  if [[ ! -d $DATA_DIR ]]; then mkdir -m 700 -- $DATA_DIR; fi
+  data_dir_ensure
   ( umask 077; print -rn -- "$1" > $backup )
 }
 

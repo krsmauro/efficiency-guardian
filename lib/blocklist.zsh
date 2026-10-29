@@ -21,14 +21,16 @@ readonly -a NEVER_BLOCK=(
 readonly DOMAIN_REGEX='^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$'
 readonly GROUP_REGEX='^[a-z0-9-]+$'
 
-# blocklist_load carpeta
+# blocklist_load carpeta [grupo_omitido...]
 # Lee todos los <grupo>.txt de la carpeta (en orden alfabético) y deja en:
 #   BLOCKED_DOMAINS  los dominios, sin duplicados, en el orden en que aparecen
-#   BLOCKED_GROUPS   los nombres de los grupos
-# Si algo está mal, muestra TODOS los errores y devuelve 1.
+#   BLOCKED_GROUPS   los nombres de todos los grupos
+# Los grupos omitidos (los de un pase en curso) se validan igual, pero sus
+# dominios no se añaden. Si algo está mal, muestra TODOS los errores y devuelve 1.
 blocklist_load() {
-  local dir=$1 file group line_number line errors=0
-  local -a files=($dir/*.txt(N)) words
+  local dir=$1 file group line_number line errors=0 found=0
+  local -a skip=("${(@)argv[2,-1]}")
+  local -a files=($dir/*.txt(N.)) words   # (.): solo archivos normales, sin enlaces ni FIFOs
   local -A seen=()
   typeset -ga BLOCKED_DOMAINS=() BLOCKED_GROUPS=()
 
@@ -55,6 +57,8 @@ blocklist_load() {
         errors=1
         continue
       fi
+      found=$(( found + 1 ))
+      if (( ${skip[(Ie)$group]} )); then continue; fi
       if (( ! ${+seen[${(L)words[1]}]} )); then
         seen[${(L)words[1]}]=1
         BLOCKED_DOMAINS+=${(L)words[1]}
@@ -63,7 +67,7 @@ blocklist_load() {
   done
 
   if (( errors )); then return 1; fi
-  if (( $#BLOCKED_DOMAINS == 0 )); then
+  if (( found == 0 )); then
     err "las listas de $dir no tienen ningún dominio"
     return 1
   fi

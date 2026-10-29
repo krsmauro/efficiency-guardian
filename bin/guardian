@@ -1,18 +1,21 @@
 #!/bin/zsh -f
 # efficiency-guardian: punto de entrada del motor de bloqueo.
 #
-# Uso: guardian start | stop | status
+# Uso: guardian start [minutos] | stop | cancel-stop | pass | status [--json] | reconcile
 #
 # Este archivo solo prepara un entorno seguro, carga los módulos de lib/ y
 # despacha el subcomando. La lógica vive en los módulos.
 #
-# Seguridad (start y stop corren como root, vía sudo):
+# Seguridad (todo menos status corre como root, vía sudo o el LaunchDaemon):
 # - El "-f" de la primera línea impide que zsh lea ~/.zshenv y los demás archivos
 #   de arranque del usuario. Sin él, como sudo en macOS conserva HOME, zsh
 #   ejecutaría como root el ~/.zshenv del usuario.
 # - Siendo root, los módulos se cargan SOLO desde una ruta fija, y antes se
 #   comprueba que nadie más que root puede modificarlos. Nunca desde $0, una
 #   ruta relativa o una variable de entorno.
+# - También se comprueba que la configuración y las listas sean solo de root: si
+#   no, otro programa podría enlazarlas a un archivo privado y leerlo en los
+#   mensajes de error, o aflojar las reglas sin sudo.
 # - Sin root (pruebas), GUARDIAN_LIB_DIR elige la carpeta de módulos.
 
 emulate -R zsh
@@ -21,11 +24,17 @@ export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 umask 022
 
 readonly INSTALLED_LIB=/usr/local/libexec/efficiency-guardian/lib
-readonly MODULES=(env log blocklist hosts-block hosts-write cmd-start cmd-stop cmd-status)
+readonly INSTALLED_ETC=/usr/local/etc/efficiency-guardian
+readonly MODULES=(
+  env log clock config config-check state lock blocklist hosts-block hosts-write session engine
+  cmd-start cmd-stop cmd-cancel-stop cmd-pass cmd-reconcile cmd-status status-json cli
+)
 
-# Error antes de tener log.zsh cargado.
+# Error antes de tener log.zsh cargado. Siendo root también va al registro: el
+# LaunchDaemon no tiene terminal, y si no se perdería en silencio.
 early_die() {
   print -ru2 -- "guardian: error: $*"
+  if (( EUID == 0 )); then logger -t efficiency-guardian "efficiency-guardian: error: $*" || true; fi
   exit 1
 }
 
@@ -43,9 +52,13 @@ require_root_only() {
 
 if (( EUID == 0 )); then
   lib_dir=$INSTALLED_LIB
-  for dir in /usr/local /usr/local/libexec ${lib_dir:h} $lib_dir; do
+  for dir in /usr/local /usr/local/libexec ${lib_dir:h} $lib_dir \
+             /usr/local/etc $INSTALLED_ETC $INSTALLED_ETC/blocklists; do
     require_root_only $dir
   done
+  if [[ -e $INSTALLED_ETC/config || -L $INSTALLED_ETC/config ]]; then
+    require_root_only $INSTALLED_ETC/config
+  fi
   for module in $MODULES; do
     require_root_only $lib_dir/$module.zsh
   done
@@ -60,18 +73,4 @@ for module in $MODULES; do
   source $lib_dir/$module.zsh
 done
 
-usage() {
-  print -ru2 -- "Uso: guardian start | stop | status"
-  print -ru2 -- "  start   bloquea los sitios de las listas (necesita sudo)"
-  print -ru2 -- "  stop    quita el bloqueo (necesita sudo)"
-  print -ru2 -- "  status  dice si el bloqueo está activo"
-  exit 2
-}
-
-if (( $# != 1 )); then usage; fi
-case $1 in
-  start)  cmd_start ;;
-  stop)   cmd_stop ;;
-  status) cmd_status ;;
-  *)      usage ;;
-esac
+cli_main "$@"

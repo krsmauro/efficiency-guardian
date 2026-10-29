@@ -180,6 +180,12 @@ Se puede volver a ejecutar para actualizar lo instalado (por ejemplo, tras cambi
 
 ## Verificación manual tras instalar (la hace el usuario)
 
+> **Desde el 2026-10-29 el instalador instala las Fases 1 y 4 juntas.** Dos diferencias con esta lista:
+> - `stop` ya no desbloquea en el acto: el bloqueo sigue **5 minutos** (`STOP_DELAY_MINUTES`). En los puntos que dicen "stop", espera 5 min y medio antes de comprobar.
+> - `status` ahora muestra varias líneas (`Sesión: …`, `Bloqueo: …`).
+>
+> Si prefieres comprobar la Fase 1 sola, instálala desde su commit (`29b7ee0`) antes de actualizar; la Fase 4 conserva el bloqueo que haya al actualizar. La verificación de la Fase 4 está en [su especificación](fase-4-sesiones-y-tiempo.md#verificación-manual-tras-instalar-44-la-hace-el-usuario).
+
 - [ ] `sudo -n /usr/local/sbin/guardian start` funciona **sin pedir contraseña**.
 - [ ] `sudo -n /usr/local/sbin/guardian status` **sí pide contraseña o falla**, porque no está en la regla. Correcto: `status` se usa sin sudo.
 - [ ] `sudo -n /usr/local/sbin/guardian rm` es rechazado.

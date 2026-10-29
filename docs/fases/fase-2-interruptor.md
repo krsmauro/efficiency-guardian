@@ -32,6 +32,10 @@ Atajos → pestaña Automatización → "+" → Concentración → **Trabajo pro
 - Ajustes del Sistema → Centro de control → Concentración → "Mostrar en la barra de menús": **cuando está activo**.
 - **Es solo un indicador provisional.** Indica que la Concentración está activa, **no** que el bloqueo lo esté. Desde la Fase 4 hay sesiones que no dependen de la Concentración (por tiempo, al encender el Mac). El indicador real de estado será la app de barra de menús ([Fase 5](fase-5-app-barra-de-menus.md)).
 - **Por eso esta fase no crea botones extra** (sesión por tiempo, pase, estado): esos controles vivirán en la app.
+- **Mientras no exista la app** (con la Fase 4 instalada):
+  - **Arrepentirse durante el retraso:** volver a activar la Concentración llama a `start`, que cancela la terminación pendiente. No hace falta un atajo para `cancel-stop`.
+  - **Pase:** escribir `sudo -n /usr/local/sbin/guardian pass` en la Terminal. Escribirlo es fricción deseada.
+  - **Estado:** `guardian status` en la Terminal.
 - **Opcional (un clic):**
   - Crear el atajo `Alternar Trabajo profundo` con la acción "Definir Concentración" → Trabajo profundo → Alternar. Verificar que "Alternar" exista en el Mac; si no, usar "Activar".
   - Añadirlo al Centro de control con "Editar controles" → Atajos, o llevarlo a la barra de menús.
@@ -40,7 +44,8 @@ Atajos → pestaña Automatización → "+" → Concentración → **Trabajo pro
 Anotar ✅ o ❌ en la bitácora de [PLAN.md](../../PLAN.md):
 
 - [ ] Activar desde el Centro de control → YouTube bloqueado.
-- [ ] Desactivar desde el Centro de control → YouTube desbloqueado.
+- [ ] Desactivar desde el Centro de control → YouTube desbloqueado (con la Fase 4, a los 5 min).
+- [ ] Desactivar y volver a activar antes de 5 min → sigue bloqueado (la terminación se cancela).
 - [ ] Activar con el atajo `Alternar` (si se creó).
 - [ ] Activar por horario: crear un horario de prueba de 2 minutos.
 - [ ] Activar desde el iPhone (si "Compartir entre dispositivos" está activado).

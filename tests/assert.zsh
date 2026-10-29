@@ -8,7 +8,8 @@ setopt NO_UNSET PIPE_FAIL
 export LC_ALL=C PATH=/usr/bin:/bin:/usr/sbin:/sbin
 
 # Que ninguna variable del entorno se cuele en las pruebas.
-unset GUARDIAN_HOSTS_FILE GUARDIAN_BLOCKLIST_DIR GUARDIAN_DATA_DIR GUARDIAN_LIB_DIR
+unset GUARDIAN_HOSTS_FILE GUARDIAN_BLOCKLIST_DIR GUARDIAN_DATA_DIR GUARDIAN_LIB_DIR GUARDIAN_CONFIG \
+      GUARDIAN_NOW GUARDIAN_BOOT_ID
 
 readonly REPO=${${(%):-%x}:A:h:h}     # carpeta del repositorio (dos niveles arriba de este archivo)
 readonly T_TMP=$(mktemp -d "${TMPDIR:-/tmp}/guardian-test.XXXXXX")

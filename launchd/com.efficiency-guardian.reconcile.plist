@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchDaemon de efficiency-guardian (Fase 4). Lo instala install.sh en
+  /Library/LaunchDaemons/ (root:wheel 644). Ejecuta "guardian reconcile" como
+  root al cargarse (también al arrancar el Mac) y luego cada 30 segundos:
+  termina las sesiones por tiempo, los retrasos y los pases cuando llega su
+  hora, y crea la sesión automática tras un arranque.
+  Los errores van al registro del sistema (ver lib/log.zsh).
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.efficiency-guardian.reconcile</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/sbin/guardian</string>
+    <string>reconcile</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>30</integer>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>

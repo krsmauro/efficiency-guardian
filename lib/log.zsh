@@ -9,13 +9,16 @@ say() {
   print -r -- "$*"
 }
 
-# Aviso o error que no detiene el programa (salida de errores).
+# Aviso o error que no detiene el programa (salida de errores). Siendo root
+# también quedan en el registro: el LaunchDaemon no tiene terminal donde mostrarlos.
 warn() {
   print -ru2 -- "guardian: aviso: $*"
+  log_event "aviso: $*"
 }
 
 err() {
   print -ru2 -- "guardian: error: $*"
+  log_event "error: $*"
 }
 
 # Error que detiene el programa con código 1.
@@ -29,8 +32,10 @@ die() {
 # El nombre va también dentro del mensaje: la etiqueta de -t no aparece en el
 # texto que filtra "log show" (verificado el 2026-10-29).
 log_event() {
-  if (( IS_ROOT )); then
-    logger -t efficiency-guardian "efficiency-guardian: $*" || warn "no se pudo escribir en el registro del sistema"
+  if (( ${IS_ROOT:-0} )); then
+    # Sin warn: warn llama a log_event, y si logger fallara sería un bucle.
+    logger -t efficiency-guardian "efficiency-guardian: $*" ||
+      print -ru2 -- "guardian: aviso: no se pudo escribir en el registro del sistema"
   fi
   return 0
 }

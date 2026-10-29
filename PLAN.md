@@ -20,9 +20,9 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 
 ## Estado actual
 
-- **Fase:** 1, código terminado (pasos 1.1 a 1.4). Faltan los pasos del usuario: 1.5 (instalar) y 1.6 (verificación manual). Siguen pendientes los supuestos S1, S2 y S3 (D10); no bloquean la Fase 1.
-- **Siguiente paso: el usuario** revisa los scripts y ejecuta `sudo ./install.sh` (paso 1.5), y luego la verificación manual de la [Fase 1](docs/fases/fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario) (1.6). Después, la Fase 2.
-- **Código escrito:** motor `bin/guardian` + 8 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), instalador y desinstalador, y 224 comprobaciones en `tests/` (`zsh tests/run.zsh`, todas pasan). **Nada instalado todavía:** `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
+- **Fases 1 y 4: código terminado** (pasos 1.1 a 1.4 y 4.0 a 4.3). El instalador instala las dos juntas. Faltan los pasos del usuario: 1.5 (instalar), 1.6 y 4.4 (verificación manual).
+- **Siguiente paso: el usuario** revisa los scripts y ejecuta `sudo ./install.sh` (1.5). Luego, la verificación manual de la [Fase 1](docs/fases/fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario) (1.6, con la nota sobre el retraso de `stop`) y la de la [Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#verificación-manual-tras-instalar-44-la-hace-el-usuario) (4.4). Después, la Fase 2 (manual, guiada) o el prototipo de la Fase 3.
+- **Código escrito:** motor `bin/guardian` + 20 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, y 534 comprobaciones en `tests/` (`zsh tests/run.zsh`, todas pasan). **Nada instalado todavía:** `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
 - **Última actualización:** 2026-10-29.
 
 ## Cómo usar este plan (agentes)
@@ -67,7 +67,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 | D7 | ~~"YouTube sin trampas" (ocultar el feed y los Shorts)~~ | ❌ descartado | Solo es posible con una extensión de navegador, y el usuario no quiere ampliar el alcance |
 | D8 | iPhone | ⛔ fuera de alcance | |
 | D9 | ¿Construir o comprar? | ✅ construir | Ninguna herramienta cubre Brave y Thorium y además la Concentración nativa. → [03](docs/investigacion/03-herramientas-existentes.md) |
-| D10 | Dos tipos de sesión, **por tiempo** e **indefinida**. Al pedir terminar, el bloqueo sigue `STOP_DELAY_MINUTES` (5) y se puede cancelar. Candado completo opcional en las sesiones por tiempo (`TIMED_LOCK`, desactivado por defecto). | ✅ usuario, **con supuestos S1, S2 y S3 por confirmar** | S1: el retraso también aplica a la sesión indefinida y a desactivar la Concentración. S2: pedir una sesión por tiempo con una indefinida en curso la convierte, conservando los pases. S3: como el Mac casi nunca se apaga (duerme), una sesión indefinida puede durar días, así que el contador de pases se reiniciaría cada día. → [fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#supuestos-que-tomé-y-el-usuario-debe-confirmar) |
+| D10 | Dos tipos de sesión, **por tiempo** e **indefinida**. Al pedir terminar, el bloqueo sigue `STOP_DELAY_MINUTES` (5) y se puede cancelar. Candado completo opcional en las sesiones por tiempo (`TIMED_LOCK`, desactivado por defecto). | ✅ usuario; supuestos resueltos el 2026-10-29 | **S1 confirmado:** el retraso también aplica a la sesión indefinida y a desactivar la Concentración. **S2 confirmado:** pedir una sesión por tiempo con una indefinida en curso la convierte (conserva los pases) y al terminar se desbloquea. **S3 descartado:** suponía que el Mac casi nunca se apaga, pero el historial muestra que se apaga cada noche, así que los pases ya se reinician a diario. → [fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#supuestos-confirmados-por-el-usuario-el-2026-10-29) |
 | D11 | Sesión indefinida **automática al encender** (`AUTOSTART_AT_BOOT`, **activada por defecto**). Termina al apagar el Mac. | ✅ usuario | El fin se detecta al **siguiente arranque**, con `kern.bootsessionuuid`, que es más fiable que engancharse al apagado |
 | D12 | Interfaz v1: **app de barra de menús en Swift**. La "experiencia asombrosa" se investiga y se pule después (Fase 6). | ✅ usuario | → [fase 5](docs/fases/fase-5-app-barra-de-menus.md) |
 | D13 | **Archivos de código con una sola responsabilidad y unas 100 líneas como máximo (150 es inaceptable).** Lo comprueba `tests/check-length.zsh`. | ✅ usuario | Permite depurar a mano. El motor se divide en `bin/guardian` (entrada) + módulos en `lib/`. Como el motor corre como root, los módulos se cargan solo desde una ruta fija de root. → [fase 1](docs/fases/fase-1-motor.md#regla-de-tamaño-d13-requisito-del-usuario) |
@@ -79,7 +79,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 | 1 | Motor de bloqueo (`start`/`stop`/`status`, IPv6, grupos, instalador) | ✅ [lista](docs/fases/fase-1-motor.md) |
 | 2 | Concentración + Atajos como interruptor | ✅ [lista](docs/fases/fase-2-interruptor.md) (manual, guiada) |
 | 3 | Cerrar las pestañas abiertas de sitios bloqueados | 📝 [borrador](docs/fases/fase-3-cerrar-pestanas.md) (prototipo de permisos primero) |
-| 4 | Sesiones por tiempo e indefinidas, retraso al terminar, arranque automático, pases | 📝 [borrador](docs/fases/fase-4-sesiones-y-tiempo.md) |
+| 4 | Sesiones por tiempo e indefinidas, retraso al terminar, arranque automático, pases | ✅ [código escrito](docs/fases/fase-4-sesiones-y-tiempo.md) (falta 4.4) |
 | 5 | App de barra de menús en Swift (v1) | 📝 [borrador](docs/fases/fase-5-app-barra-de-menus.md) |
 | 6 | Investigar y pulir la experiencia de usuario | ⏳ se escribe al llegar |
 
@@ -102,11 +102,11 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 - [ ] 3.4 Verificación manual en los 5 navegadores.
 
 ### Fase 4: sesiones, tiempo y pases
-- [ ] 4.0 **Usuario:** confirmar los supuestos S1, S2 y S3.
-- [ ] 4.1 Configuración (`config.default`, lectura validada) y archivo de estado.
-- [ ] 4.2 `start <min>`, `stop` con retraso, `cancel-stop`, `pass`, `status --json` y `reconcile`, con pruebas (reloj y arranque falsos).
-- [ ] 4.3 LaunchDaemon `reconcile` cada 30 s + regla de sudoers generada desde la configuración.
-- [ ] 4.4 Verificación manual: reinicio, reposo, pase, retraso, candado.
+- [x] 4.0 **Usuario:** confirmar los supuestos S1, S2 y S3 (S1 y S2 sí; S3 descartado).
+- [x] 4.1 Configuración (`config.default`, lectura validada) y archivo de estado.
+- [x] 4.2 `start <min>`, `stop` con retraso, `cancel-stop`, `pass`, `status --json` y `reconcile`, con pruebas (reloj y arranque falsos).
+- [x] 4.3 LaunchDaemon `reconcile` cada 30 s + regla de sudoers generada desde la configuración.
+- [ ] 4.4 **Usuario:** verificación manual: reinicio, reposo, pase, retraso, candado (checklist en la especificación).
 - [ ] 4.5 Tras 1–2 semanas de uso, revisar los registros y ajustar los valores por defecto.
 
 ### Fase 5: app de barra de menús (v1)
@@ -201,3 +201,32 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
   - La copia previa a la migración lleva fecha (`hosts.before-install.<fecha-hora>`).
   - `status` sale con 1 si los marcadores están dañados; el uso incorrecto sale con 2.
 - **Para la Fase 4:** el estado necesitará un candado (`lockf`/`shlock`) porque el LaunchDaemon y un atajo pueden escribir a la vez. Anotado en su especificación.
+
+### 2026-10-29 · Sesión 3: Fase 4, pasos 4.0 a 4.3
+- **Decisiones del usuario (4.0):** S1 confirmado (el retraso aplica a todas las sesiones). S2 confirmado (convertir la sin fin en una por tiempo; al terminar se desbloquea). S3 descartado.
+- **Hallazgo que descartó S3:** el historial de arranques muestra que **el Mac se apaga casi todas las noches** (36 días; el mayor tiempo encendido, unas 26 h). La sesión automática ya dura un día y los pases se reinician solos. Anotado en [entorno.md](docs/entorno.md).
+- **Hecho:**
+  - Configuración y estado leídos línea por línea con validación estricta (nunca `source`), candado con `zsystem flock`, sesiones, retraso, pases, `status --json`, `reconcile`, LaunchDaemon, regla de sudoers desde `TIMED_PRESETS`, y el instalador y el desinstalador al día. 20 módulos; el más largo, 90 líneas.
+  - Pruebas: de 224 a 534 comprobaciones, con reloj y arranque falsos.
+  - **Ensayo completo sin root** del instalador (instalación nueva, reinstalación, permisos inseguros, desinstalación y **actualización desde la Fase 1 con el bloqueo activo**). Detalle en la [especificación](docs/fases/fase-4-sesiones-y-tiempo.md#instalador-y-desinstalador).
+- **Por qué 4.1 a 4.3 van juntos:** con el retraso, `stop` ya no desbloquea; lo hace `reconcile` cuando llega la hora. Instalar el motor nuevo sin el LaunchDaemon dejaría `stop` sin efecto.
+- **Cambios respecto a la especificación** (todos marcados en ella con "(cambio)"):
+  - `reconcile` revisa los vencimientos **antes** del arranque nuevo, para que una sesión por tiempo vencida con el Mac apagado no impida el arranque automático.
+  - **Sin estado (primera vez), se conserva lo que haya en hosts:** instalar no activa ni quita el bloqueo, y actualizar desde la Fase 1 con el bloqueo activo lo conserva.
+  - Con las listas dañadas y un bloque ya puesto, el bloque se deja como está, para que `stop` siga funcionando.
+  - Convertir una sesión (S2) nunca termina antes que el retraso al terminar.
+  - `status` muestra la sesión como la dejaría `reconcile`, sin escribir nada.
+  - `zsystem flock` en vez de `lockf`; `GUARDIAN_DATA_DIR` en vez de `GUARDIAN_STATE_DIR`.
+- **Hallazgos:**
+  - **Trampa de zsh nueva:** un `=~` dentro de una función llamada pisa `$match` de quien la llamó. Lo detectó la primera prueba manual.
+  - **Las líneas manuales antiguas impedirían los pases:** bloquean YouTube fuera del bloque gestionado. Si al instalar no se quitan (paso 6), un pase no desbloquea YouTube.
+- **Revisión independiente (un agente aparte, buscando fallos):** no encontró forma de obtener root ni de redirigir el motor. Sí encontró fallos en los caminos de error, todos corregidos y con prueba:
+  - Borrar la lista de un grupo de `PASS_GROUPS` dejaba sin funcionar `stop` y `reconcile`. Ahora eso solo se comprueba en el instalador y en `pass`.
+  - Con las listas dañadas, `pass` contaba el pase sin desbloquear nada. Ahora no lo gasta.
+  - Un fallo del instalador después de copiar dejaba el LaunchDaemon descargado. Ahora la configuración se valida antes de tocar nada, y el LaunchDaemon se carga antes que la regla de sudoers.
+  - El desinstalador quitaba el bloque antes que la regla de sudoers: un atajo podía volver a ponerlo sin motor para quitarlo. Ahora quita primero la regla y toma el candado.
+  - Endurecimiento: el motor (siendo root) comprueba también las carpetas de configuración y listas, y no lee enlaces. Un byte nulo en el estado cuenta como dañado. Los avisos y errores quedan en el registro.
+  - `status` mostraba mal la hora de fin si la sesión por tiempo acababa antes que el retraso.
+  - La prueba del candado dependía de un `sleep` fijo; ahora espera una señal.
+  - **Sin verificar, añadido a 4.4:** si `kern.bootsessionuuid` cambia al despertar de un reposo profundo, la sesión sin fin terminaría con cada reposo.
+- **Siguiente:** el usuario instala y verifica (1.5, 1.6 y 4.4).
