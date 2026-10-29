@@ -224,18 +224,22 @@ Los casos mínimos de la especificación original están todos cubiertos.
 
 Además de la [verificación de la Fase 1](fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario):
 
-- [ ] `sudo launchctl print system/com.efficiency-guardian.reconcile` muestra el trabajo cargado, con `run interval = 30 seconds`.
+- [x] `sudo launchctl print system/com.efficiency-guardian.reconcile` muestra el trabajo cargado, con `run interval = 30 seconds`. (2026-10-29: funciona sin sudo; 57 ejecuciones en 28 min, todas con salida 0.)
 - [ ] `sudo -n /usr/local/sbin/guardian start 25` funciona sin contraseña, y `sudo -n /usr/local/sbin/guardian start 37` la pide o falla.
-- [ ] **Retraso:** `sudo -n guardian stop` → `guardian status` dice "Terminación pendiente". A los 5 min (más hasta 30 s), YouTube vuelve a cargar sin hacer nada más.
-- [ ] **Seguir trabajando:** `stop` y luego `sudo -n guardian cancel-stop` → a los 6 min sigue bloqueado.
-- [ ] **Pase:** `sudo -n guardian pass` → YouTube carga (quizá haya que recargar); Facebook no. A los 5 min, una pestaña nueva de YouTube no carga (la abierta puede seguir: Fase 3).
+- [x] **Retraso:** `sudo -n guardian stop` → `guardian status` dice "Terminación pendiente". A los 5 min (más hasta 30 s), YouTube vuelve a cargar sin hacer nada más. (2026-10-29: `stop` a las 12:36:26, fin a las 12:41:39.)
+- [ ] **Seguir trabajando:** `stop` y luego `sudo -n guardian cancel-stop` → a los 6 min sigue bloqueado. (2026-10-29: `cancel-stop` respondió "Terminación cancelada: la sesión sigue" y `status` lo confirmó, pero no se esperaron los 6 min: el usuario volvió a pedir `stop` al momento.)
+- [x] **Pase:** `sudo -n guardian pass` → YouTube carga (quizá haya que recargar); Facebook no. A los 5 min, una pestaña nueva de YouTube no carga (la abierta puede seguir: Fase 3). (2026-10-29, Brave: YouTube cargó y WhatsApp Web no. El pase venció a las 12:17:45 y `reconcile` volvió a bloquear a las 12:17:59. No se probó expresamente iniciar sesión en YouTube Studio durante el pase, pero `www.youtube.com` cargaba, que es lo que bloqueaba ese inicio de sesión.)
 - [ ] **Reposo:** con una sesión de 25 min, cerrar la tapa 30 min. Al abrir, ¿cuánto tarda en desbloquearse? (¿launchd ejecuta el trabajo pendiente al despertar?)
 - [ ] **Reposo largo (una noche sin apagar):** antes, anotar `sysctl -n kern.bootsessionuuid` y la hora de inicio de `guardian status`. Al despertar, ¿son iguales? Si el identificador cambiara al despertar de un reposo profundo, la sesión sin fin terminaría con cada reposo (sin verificar; lo señaló la revisión).
 - [ ] **Reinicio:** con una sesión sin fin, reiniciar. Al entrar, `guardian status` muestra una sesión **nueva** (hora de inicio de ahora, pases 0 de 3). ¿Cuánto tarda en aparecer?
 - [ ] **Candado (opcional):** poner `TIMED_LOCK=yes` con sudo, `start 25` y `stop` → rechazado con la hora de fin. Volver a `no`.
-- [ ] El registro muestra los eventos: `/usr/bin/log show --last 1h --style compact --predicate 'process == "logger" AND eventMessage BEGINSWITH "efficiency-guardian"'`.
+- [x] El registro muestra los eventos (start, pass, fin del pase, stop, cancel-stop y fin de la sesión): `/usr/bin/log show --last 1h --style compact --predicate 'process == "logger" AND eventMessage BEGINSWITH "efficiency-guardian"'`.
 
 Anota los resultados en la bitácora de [PLAN.md](../../PLAN.md).
+
+### Fallos encontrados en la verificación manual (sin arreglar)
+
+- **2026-10-29 · La pista de `stop` no se puede ejecutar tal cual.** `stop` dice "Para seguir trabajando: guardian cancel-stop." ([lib/cmd-stop.zsh](../../lib/cmd-stop.zsh)). El usuario lo escribió y obtuvo `zsh: command not found: guardian`: `/usr/local/sbin` no está en el PATH del usuario (`/etc/paths` de macOS no lo incluye), y además hace falta `sudo -n`. Lo que funciona es `sudo -n /usr/local/sbin/guardian cancel-stop`. Es el único mensaje del motor que sugiere un comando. Arreglo posible: escribir el comando completo en el mensaje. Esperar a la app (5.6): con ella casi nadie escribirá comandos.
 
 ## Medir para ajustar (4.5)
 

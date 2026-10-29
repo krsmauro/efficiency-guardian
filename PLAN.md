@@ -21,17 +21,16 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 ## Estado actual
 
 - **Regla del usuario (2026-10-29): no escribir más código hasta que el usuario haga las pruebas manuales** (1.5, 1.6, 4.4, 3.1 y 5.6). Si un agente encuentra un fallo antes, **lo documenta** (en la especificación de su fase y en la bitácora) para que otro agente lo arregle después, cuando el usuario lo pida. No lo arregla.
-- **Fases 1 y 4: código terminado** (pasos 1.1 a 1.4 y 4.0 a 4.3). El instalador instala las dos juntas. Faltan los pasos del usuario: 1.5 (instalar), 1.6 y 4.4 (verificación manual).
-- **1.5 en curso (2026-10-29):** el primer intento se detuvo en el paso 6 por un fallo de `chown` (ver la bitácora, sesión 6). Arreglado con el permiso del usuario; falta volver a ejecutar `sudo ./install.sh`. Mientras tanto: archivos copiados, sin LaunchDaemon ni regla de sudoers, `/etc/hosts` intacto.
+- **Fases 1 y 4: instaladas el 2026-10-29** (1.5 hecho, al segundo intento: ver la bitácora, sesión 6). Verificación manual (1.6 y 4.4) **en curso**: lo hecho está marcado en cada checklist. Bloqueo, regla de sudoers, pase, retraso al terminar y LaunchDaemon funcionan en el sistema real.
 - **Fase 5: código terminado** (5.1 a 5.4): la app de barra de menús en `app/`. Compila y sus pruebas pasan, pero **nunca ha hablado con el motor instalado**. Una revisión encontró 6 fallos, arreglados pero dos de ellos **sin probar** ([lista](docs/fases/fase-5-app-barra-de-menus.md#fallos-de-la-revisión-2026-10-29-arreglados-sin-probar-a-mano)). Faltan 5.5 (decidir si absorbe la Fase 3) y la verificación del usuario (5.6).
 - **Fase 3: script escrito y probado sin navegadores** (3.2 y la mitad de 3.3). **No lo instala todavía el instalador:** quién lo ejecuta cada 15 s depende de la prueba de permisos 3.1.
 - **Siguientes pasos: el usuario.** Ya no queda trabajo del agente que no dependa de ellos:
-  - **El más importante:** revisar los scripts y ejecutar `sudo ./install.sh` (1.5). Luego, la verificación manual de la [Fase 1](docs/fases/fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario) (1.6, con la nota sobre el retraso de `stop`) y la de la [Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#verificación-manual-tras-instalar-44-la-hace-el-usuario) (4.4). Todo lo demás se apoya en el motor, que aún no se ha probado en el sistema real.
+  - **El más importante:** terminar la verificación manual de la [Fase 1](docs/fases/fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario) (1.6) y la de la [Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#verificación-manual-tras-instalar-44-la-hace-el-usuario) (4.4). Las casillas sin marcar son lo que falta.
   - **Con el motor instalado:** compilar e instalar la app (`zsh app/build.zsh` y copiarla a `/Applications`, sin sudo; [instrucciones](docs/fases/fase-5-app-barra-de-menus.md#compilar-e-instalar-lo-hace-el-usuario-sin-sudo)) y hacer su [verificación](docs/fases/fase-5-app-barra-de-menus.md#verificación-manual-56-la-hace-el-usuario-con-el-motor-instalado) (5.6).
   - La prueba de permisos de la Fase 3 (3.1), sin sudo y en cualquier momento: `zsh tools/try-close-tabs.zsh terminal` y luego `agent` ([instrucciones](docs/fases/fase-3-cerrar-pestanas.md#cómo-hacer-la-prueba-toolstry-close-tabszsh-sin-sudo)). Anotar a nombre de quién pide macOS el permiso.
 - **Después, el agente (solo cuando el usuario lo pida, tras sus pruebas):** con el resultado de 3.1, decidir 5.5 (¿cierra las pestañas la app o un LaunchAgent?) y escribir el disparador de la Fase 3. Con los resultados de 1.6, 4.4 y 5.6, corregir lo que falle. O guiar la Fase 2 (manual).
 - **Código escrito:** motor `bin/guardian` + 20 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), `config.default`, el LaunchDaemon en `launchd/`, instalador y desinstalador, `close-tabs/` (Fase 3, 4 archivos), `tools/try-close-tabs.zsh`, y la app en `app/` (Fase 5: 24 archivos de Swift, `Package.swift` y `build.zsh`).
-- **Pruebas:** 612 comprobaciones en `tests/` (`zsh tests/run.zsh`) y 59 de la app (`swift test --package-path app`). Todas pasan. **Instalación a medias** (ver 1.5 arriba): `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
+- **Pruebas:** 612 comprobaciones en `tests/` (`zsh tests/run.zsh`) y 59 de la app (`swift test --package-path app`). Todas pasan. **Instalado** el motor (Fases 1 y 4); las 4 líneas manuales de YouTube se quitaron al instalar.
 - **Última actualización:** 2026-10-29.
 
 ## Cómo usar este plan (agentes)
@@ -97,7 +96,7 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 - [x] 1.2 Escribir las pruebas primero: una por módulo en `tests/`, el fixture y `check-length.zsh` (D13).
 - [x] 1.3 Escribir `bin/guardian` y los módulos de `lib/` hasta que pasen las pruebas.
 - [x] 1.4 Escribir `install.sh` (con sus pasos en `install/`) y `uninstall.sh`.
-- [ ] 1.5 **Usuario:** revisar los scripts y ejecutar `sudo ./install.sh`.
+- [x] 1.5 **Usuario:** revisar los scripts y ejecutar `sudo ./install.sh`. (2026-10-29, al segundo intento.)
 - [ ] 1.6 **Usuario:** verificación manual (checklist en la especificación, incluidos YouTube Studio, WhatsApp Web y Pinterest).
 
 ### Fase 2: el interruptor
@@ -141,7 +140,7 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
   - Quizá Safari con iCloud Private Relay (sin confirmar).
 - **Las automatizaciones de Atajos** tienen casos de fiabilidad sin confirmar en el Mac: activación desde el iPhone, por horario, tras reposo. Se prueban en 2.6.
 - **Las listas de dominios envejecen:** revisarlas de vez en cuando contra AdGuard y NextDNS ([04](docs/investigacion/04-dominios.md)).
-- **YouTube Studio** podría depender en parte de `www.youtube.com` (sin verificar). Si es así, se usa un pase.
+- **YouTube Studio:** con la sesión iniciada funciona, pero **iniciar sesión** durante una sesión de bloqueo falla, porque la redirección pasa por `www.youtube.com/signin` (verificado el 2026-10-29). Se usa un pase.
 
 ## Preguntas sin verificar (resolverlas al llegar a la fase)
 
@@ -279,10 +278,19 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
 - **Error del agente:** el usuario preguntó si ya solo quedaba la evaluación humana, y el agente siguió arreglando los fallos de la revisión. De ahí la regla de arriba.
 - **Siguiente:** el usuario instala y verifica (1.5, 1.6, 4.4), luego la app (5.6). La prueba 3.1, cuando quiera.
 
-### 2026-10-29 · Sesión 6: el usuario instala (1.5), primer intento
+### 2026-10-29 · Sesión 6: el usuario instala (1.5) y empieza a verificar
 - **El usuario tomó el control:** pidió que el agente le guíe paso a paso. Antes de instalar se comprobó: pruebas en verde, `/usr/local` de root (Homebrew está en `/opt/homebrew`), sin carpetas compartidas previas.
 - **Fallo encontrado al instalar:** el paso 6 (quitar las 4 líneas manuales) se detuvo con `chown: --: No such file or directory`. El `chown` de macOS deja de leer opciones en el primer argumento normal, así que en `chown root:wheel -- archivo` toma el `--` por un archivo. Rompía **toda** escritura de hosts siendo root, no solo el instalador.
 - **Por qué no lo vieron las pruebas:** corren sin root y esa línea solo se ejecuta como root; el ensayo de la sesión 2 simulaba `chown`. Las otras dos ramas solo de root (`dns_flush` y `log_event`) solo avisan si fallan: no pueden detener nada.
 - **Arreglado con el permiso del usuario** (excepción a la regla de no escribir código, porque bloqueaba su prueba): `chown -- root:wheel` y `tests/test-hosts-write.zsh`, que finge root y ejecuta el `chown` real. Con la línea antigua, la prueba falla con el mismo mensaje. Detalle en la [especificación](docs/fases/fase-1-motor.md#instalador-installsh-lo-ejecuta-el-usuario-sudo-installsh).
 - **Estado tras el intento:** archivos copiados y verificados (pasos 4 y 5); sin LaunchDaemon ni regla de sudoers; `/etc/hosts` intacto; una copia `hosts.before-install.20261029-114509` en `/var/db/efficiency-guardian/`.
-- **Siguiente:** el usuario vuelve a ejecutar `sudo ./install.sh`.
+- **Segundo intento: instalado** (11:52). Las 4 líneas manuales se quitaron, con copia.
+- **Verificación manual, primera tanda** (detalle marcado en los checklists de las Fases 1 y 4):
+  - Regla de sudoers: `start` sin contraseña; `status` y `rm` rechazados. **Trampa:** sudo recuerda la contraseña 5 min, así que tras instalar hay que hacer `sudo -k` antes de probarla. Anotado en la Fase 1.
+  - YouTube no carga en los cinco navegadores; LinkedIn sí, salvo en Thorium ("403 Forbidden", del servidor de LinkedIn: no es el bloqueo; Thorium es un Chromium de mediados de 2025).
+  - **YouTube Studio:** con la sesión iniciada funciona; **iniciar sesión** falla, porque la redirección pasa por `www.youtube.com/signin`. Hosts no puede desbloquear una sola página. Se acepta: se usa un pase (el usuario lo considera un caso raro).
+  - Pase: desbloqueó solo YouTube (71 de 82 dominios bloqueados) y `reconcile` volvió a bloquear 14 s después de vencer. LaunchDaemon: 57 ejecuciones en 28 min, todas con salida 0.
+  - Retraso al terminar: `stop` a las 12:36:26, fin a las 12:41:39. `/etc/hosts` quedó del mismo tamaño que antes de `start`, sin bloque.
+- **Fallo nuevo, sin arreglar:** la pista de `stop` ("guardian cancel-stop") no funciona tal cual: `/usr/local/sbin` no está en el PATH y falta `sudo -n`. Anotado en la [especificación de la Fase 4](docs/fases/fase-4-sesiones-y-tiempo.md#fallos-encontrados-en-la-verificación-manual-sin-arreglar).
+- **Error del agente:** ejecutó `sudo -n true` (no hace nada) contra la regla de que solo el usuario ejecuta sudo. Se le avisó al usuario.
+- **Siguiente:** seguir con las casillas sin marcar de 1.6 y 4.4.
