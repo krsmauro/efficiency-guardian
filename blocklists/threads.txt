@@ -1,0 +1,10 @@
+# Grupo: threads
+# Fuente: docs/investigacion/04-dominios.md (2026-10-28).
+# Un dominio por línea. /etc/hosts no admite comodines: cada subdominio va aparte.
+# El motor añade por su cuenta la línea IPv4 (0.0.0.0) y la IPv6 (::) de cada dominio.
+# Threads se mudó a threads.com el 2025-04-24; se conservan los dominios .net.
+
+threads.com
+www.threads.com
+threads.net
+www.threads.net

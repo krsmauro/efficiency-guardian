@@ -1,0 +1,12 @@
+# Grupo: twitch
+# Fuente: docs/investigacion/04-dominios.md (2026-10-28).
+# Un dominio por línea. /etc/hosts no admite comodines: cada subdominio va aparte.
+# El motor añade por su cuenta la línea IPv4 (0.0.0.0) y la IPv6 (::) de cada dominio.
+# Dominios sin investigar a fondo: verificar en el paso 1.6.
+
+twitch.tv
+www.twitch.tv
+m.twitch.tv
+clips.twitch.tv
+player.twitch.tv
+gql.twitch.tv

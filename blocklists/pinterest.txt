@@ -1,0 +1,15 @@
+# Grupo: pinterest
+# Fuente: docs/investigacion/04-dominios.md (2026-10-28).
+# Un dominio por línea. /etc/hosts no admite comodines: cada subdominio va aparte.
+# El motor añade por su cuenta la línea IPv4 (0.0.0.0) y la IPv6 (::) de cada dominio.
+# Dominios sin investigar a fondo. Pinterest redirige a un subdominio por país:
+# verificar en el paso 1.6 a cuál redirige en esta Mac y añadirlo si falta.
+
+pinterest.com
+www.pinterest.com
+co.pinterest.com
+es.pinterest.com
+pinterest.es
+pin.it
+i.pinimg.com
+s.pinimg.com

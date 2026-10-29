@@ -66,6 +66,8 @@ PASS_UNTIL=<epoch o 0>
 
 - `BOOT_ID` sale de `sysctl -n kern.bootsessionuuid`, que cambia en cada arranque (verificado el 2026-10-28). Sirve para saber que el Mac **se apagó o reinició**.
 - Escribir el estado de forma atómica (temporal + `mv`), igual que hosts.
+- **Dos llamadas a la vez** (el LaunchDaemon cada 30 s y un atajo o la app) pueden leer el mismo estado y pisarse al escribir (por ejemplo, perder un pase contado). Hace falta un candado alrededor de "leer, decidir, escribir": `/usr/bin/lockf` o `/usr/bin/shlock`, ambos en macOS (verificado el 2026-10-29). En la Fase 1 no hacía falta: dos `start` a la vez escriben exactamente lo mismo.
+- **Notas de la Fase 1 que aplican aquí** (ver [fase 1](fase-1-motor.md)): la primera línea `#!/bin/zsh -f`, la trampa de zsh con expansiones dentro de un `if`, y que el registro se lee con `/usr/bin/log` (no `log`).
 
 ## Módulos nuevos (regla D13: una responsabilidad y unas 100 líneas como máximo por archivo)
 
@@ -173,5 +175,5 @@ Sin root, como en la Fase 1. Variables solo para pruebas, ignoradas si se ejecut
 
 Cada pase, inicio y terminación queda registrado con `logger -t efficiency-guardian`. Tras 1–2 semanas, revisar los registros para saber si 5 min × 3 pases y 5 min de retraso son los valores correctos:
 ```
-log show --predicate 'eventMessage CONTAINS "efficiency-guardian"' --last 7d
+/usr/bin/log show --last 7d --style compact --predicate 'process == "logger" AND eventMessage BEGINSWITH "efficiency-guardian"'
 ```

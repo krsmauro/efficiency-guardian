@@ -1,0 +1,10 @@
+# Grupo: tiktok
+# Fuente: docs/investigacion/04-dominios.md (2026-10-28).
+# Un dominio por línea. /etc/hosts no admite comodines: cada subdominio va aparte.
+# El motor añade por su cuenta la línea IPv4 (0.0.0.0) y la IPv6 (::) de cada dominio.
+
+tiktok.com
+www.tiktok.com
+m.tiktok.com
+vm.tiktok.com
+vt.tiktok.com

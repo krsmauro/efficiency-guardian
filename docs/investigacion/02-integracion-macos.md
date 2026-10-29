@@ -84,6 +84,7 @@ Swift es **el único lenguaje con una ventaja enorme aquí**, pero **solo para l
   - Los de `~/.nvm` y `/opt/homebrew` son propiedad del usuario, así que se pueden reemplazar.
   - Un intérprete con `-c` o `-e` ejecuta cualquier código, así que esa regla equivale a dar una terminal root.
 - **Higiene del script:**
+  - **Primera línea `#!/bin/zsh -f`** (añadido el 2026-10-29). sudo en macOS conserva `HOME` (`env_keep += "HOME MAIL"` en el sudoers por defecto; no verificado leyendo `/etc/sudoers`, que no es legible sin root). Sin `-f`, zsh ejecutaría como root el `~/.zshenv` del usuario. El `-f` evita leer cualquier archivo de arranque del usuario.
   - PATH explícito.
   - La lista de dominios en un archivo de root.
   - Escritura **atómica** de `/etc/hosts`: archivo temporal en `/etc` y luego `mv`.

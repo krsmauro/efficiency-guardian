@@ -24,6 +24,18 @@ Verificado el **2026-10-28**:
 | AppleScript en navegadores Chromium | Los 4 (incluido Thorium) declaran `OSAScriptingDefinition = scripting.sdef`, así que tienen diccionario de scripting para la Fase 3 | `PlistBuddy` sobre `Info.plist` |
 | Config. de modos de Concentración | **Protegida por macOS** (`~/Library/DoNotDisturb/DB/ModeConfigurations.json` → `Operation not permitted`). No sabemos qué modos tiene creados. Leer/vigilar ese archivo desde un script **no es viable** sin dar "Acceso total al disco". | `python3 open()` |
 
+Verificado el **2026-10-29**:
+
+| Hecho | Valor | Cómo se verificó |
+|---|---|---|
+| zsh | 5.9 en `/bin/zsh` | `zsh --version` |
+| `log` en zsh | **Es un comando interno de zsh** (lista inicios de sesión): `log show …` falla con "too many arguments". Usar `/usr/bin/log show …`. | Probado en la terminal |
+| `logger -t etiqueta` | La etiqueta **no** aparece en el texto del mensaje que filtra `log show`, así que `eventMessage CONTAINS "etiqueta"` no lo encuentra. El motor pone su nombre también dentro del mensaje. | `logger` + `/usr/bin/log show` |
+| `visudo -c -f archivo` | Funciona sin root: sirve para validar en las pruebas la regla de sudoers generada | Probado |
+| `/usr/local/libexec` | No existe: la crea el instalador | `ls -ld` |
+| `/usr/local/lib` | `root:wheel 775` (escribible por el grupo `wheel`). No lo usamos; por eso los módulos van en `/usr/local/libexec`. | `ls -la /usr/local` |
+| Candados para la Fase 4 | `/usr/bin/lockf` y `/usr/bin/shlock` existen | `ls -l` |
+
 ## Estado del bloqueo manual previo
 
 El usuario ya bloqueó YouTube a mano en `/etc/hosts` (y luego tuvo que desbloquearlo para algo legítimo; ver [conversation.txt](../conversation.txt)). Contenido al 2026-10-28:

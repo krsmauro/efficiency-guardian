@@ -1,0 +1,21 @@
+#!/bin/zsh -f
+# Comprueba la sintaxis (zsh -n) de todos los archivos de código. Importa sobre
+# todo para install.sh y uninstall.sh, que las pruebas no pueden ejecutar porque
+# necesitan root: así un error de escritura no aparece por primera vez con sudo.
+
+source ${0:A:h}/assert.zsh
+
+section "Sintaxis"
+for file in $REPO/bin/guardian $REPO/lib/*.zsh $REPO/install.sh $REPO/uninstall.sh \
+            $REPO/install/*.zsh $REPO/tests/*.zsh; do
+  assert_true "${file#$REPO/}" zsh -n $file
+done
+
+section "Primera línea de los ejecutables"
+for file in $REPO/bin/guardian $REPO/install.sh $REPO/uninstall.sh; do
+  # "-f": zsh no lee los archivos de arranque del usuario (ver bin/guardian).
+  assert_eq "${file#$REPO/} usa /bin/zsh -f" '#!/bin/zsh -f' "$(head -n 1 $file)"
+  assert_true "${file#$REPO/} es ejecutable" test -x $file
+done
+
+finish

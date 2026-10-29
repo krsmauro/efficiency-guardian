@@ -15,37 +15,45 @@ Un comando `guardian start|stop|status` que añade o quita un bloque gestionado 
 - **Objetivo:** que el usuario pueda depurar a mano leyendo un archivo de principio a fin.
 - **Cuenta como código:** `bin/`, `lib/`, `install*`, `uninstall*`, `tests/` y, más adelante, `app/`.
 - **No cuentan** los datos (`blocklists/*.txt`, `config.default`, `.plist`) ni la documentación (`*.md`).
-- `tests/check-length.zsh` **falla si un archivo de código pasa de 150 líneas y avisa si pasa de 100**. Corre con el resto de las pruebas, así que el instalador no instala código que rompa la regla.
+- `tests/check-length.zsh` **falla si un archivo de código llega a 150 líneas y avisa si pasa de 100**. Corre con el resto de las pruebas, así que el instalador no instala código que rompa la regla. (2026-10-29: antes decía "pasa de 150", lo que dejaba pasar un archivo de exactamente 150; se alineó con "150 es inaceptable".)
 
 ## Archivos en el repositorio
 
 ```
-bin/guardian              # punto de entrada: carga los módulos y despacha el subcomando
-lib/env.zsh               # entorno seguro (PATH, umask, opciones) y rutas: reales si es root, de prueba si no
-lib/log.zsh               # mensajes de error e información, y registro con logger
-lib/blocklist.zsh         # leer, normalizar y validar listas; lista "nunca bloquear"
-lib/hosts-block.zsh       # texto puro: localizar, quitar y construir el bloque gestionado
-lib/hosts-write.zsh       # copia de seguridad, escritura atómica de /etc/hosts y vaciado de la caché DNS
-lib/cmd-start.zsh         # subcomando start
-lib/cmd-stop.zsh          # subcomando stop
-lib/cmd-status.zsh        # subcomando status
-blocklists/<grupo>.txt    # un archivo por grupo (youtube, facebook, ...), un dominio por línea
-install.sh                # instalador: solo llama a los pasos en orden (lo ejecuta el usuario con sudo)
-install/files.zsh         # copiar archivos con dueño y permisos
-install/migrate-hosts.zsh # quitar las líneas manuales antiguas de YouTube
-install/sudoers.zsh       # generar, validar e instalar la regla de sudoers
-install/verify.zsh        # comprobar la cadena de dueños y permisos
-uninstall.sh              # desinstalador
-tests/run.zsh             # ejecuta todos los tests/test-*.zsh y check-length.zsh
-tests/assert.zsh          # funciones de aserción compartidas
-tests/test-blocklist.zsh  # pruebas de lib/blocklist.zsh
-tests/test-hosts-block.zsh# pruebas de lib/hosts-block.zsh
-tests/test-commands.zsh   # pruebas de start/stop/status de punta a punta, sobre un hosts temporal
-tests/check-length.zsh    # regla de tamaño
-tests/fixtures/hosts      # copia del hosts real de esta Mac (ver docs/entorno.md)
+bin/guardian                # punto de entrada: entorno seguro (PATH, umask, opciones), verifica y carga los módulos, despacha
+lib/env.zsh                 # rutas: reales si es root, de prueba (GUARDIAN_*) si no; LC_ALL=C
+lib/log.zsh                 # mensajes para la persona y registro con logger
+lib/blocklist.zsh           # leer, normalizar y validar listas; lista "nunca bloquear"
+lib/hosts-block.zsh         # texto puro: localizar, quitar y construir el bloque gestionado
+lib/hosts-write.zsh         # leer, copia de seguridad, escritura atómica y vaciado de la caché DNS
+lib/cmd-start.zsh           # subcomando start
+lib/cmd-stop.zsh            # subcomando stop
+lib/cmd-status.zsh          # subcomando status
+blocklists/<grupo>.txt      # un archivo por grupo (youtube, facebook, ...), un dominio por línea
+install.sh                  # instalador: solo llama a los pasos en orden (lo ejecuta el usuario con sudo)
+install/paths.zsh           # rutas de instalación, compartidas por el instalador y el desinstalador
+install/files.zsh           # copiar archivos con dueño y permisos
+install/verify.zsh          # comprobar la cadena de dueños y permisos
+install/migrate-hosts.zsh   # quitar las líneas manuales antiguas de YouTube
+install/sudoers.zsh         # generar, validar e instalar la regla de sudoers
+uninstall.sh                # desinstalador
+tests/run.zsh               # ejecuta todos los tests/test-*.zsh y check-length.zsh
+tests/assert.zsh            # funciones de aserción compartidas
+tests/e2e.zsh               # ayudas de las pruebas de punta a punta (un caso = una carpeta temporal)
+tests/test-blocklist.zsh    # pruebas de lib/blocklist.zsh
+tests/test-hosts-block.zsh  # pruebas de lib/hosts-block.zsh
+tests/test-commands.zsh     # start/stop/status de punta a punta, sobre un hosts temporal
+tests/test-errors.zsh       # errores de punta a punta: el hosts siempre queda intacto
+tests/test-install.zsh      # partes del instalador que no necesitan root
+tests/test-syntax.zsh       # zsh -n de todo el código (el instalador no se puede ejecutar sin root)
+tests/test-check-length.zsh # pruebas de la regla de tamaño
+tests/check-length.zsh      # regla de tamaño
+tests/fixtures/hosts        # copia del hosts real de esta Mac (ver docs/entorno.md)
 ```
 
 Esta lista es una guía. Si un archivo se acerca a 100 líneas, divídelo por responsabilidad y actualiza esta lista.
+
+**Ejecutar las pruebas:** `zsh tests/run.zsh` (sin root, unos segundos).
 
 ## Rutas instaladas
 
@@ -61,9 +69,11 @@ Esta lista es una guía. Si un archivo se acerca a 100 líneas, divídelo por re
 
 Dividir el motor en módulos (D13) significa que `guardian`, corriendo como root, carga otros archivos con `source`. **Cada módulo cargado como root tiene el mismo poder que el script principal**, así que:
 
+- **Primera línea `#!/bin/zsh -f`** en `bin/guardian`, `install.sh` y `uninstall.sh` (lo comprueba `tests/test-syntax.zsh`). El `-f` impide que zsh lea `~/.zshenv` y los demás archivos de arranque del usuario. Es necesario porque **sudo en macOS conserva `HOME`** (`Defaults env_keep += "HOME MAIL"` en el `/etc/sudoers` por defecto; conocido, pero no verificado leyendo el archivo, que no es legible sin root): sin `-f`, zsh ejecutaría como root el `~/.zshenv` del usuario, que cualquier programa suyo puede modificar.
+
 - **Siendo root**, los módulos se cargan **solo** desde la ruta fija `/usr/local/libexec/efficiency-guardian/lib`. **Nunca** desde una ruta relativa, desde `$0` ni desde una variable de entorno.
 - **Sin root** (pruebas), se aceptan `GUARDIAN_LIB_DIR` y las demás variables `GUARDIAN_*`. Así las pruebas usan `lib/` del repositorio.
-- **Recomendado:** siendo root, antes de cargarlos, comprobar que la carpeta y cada módulo son de root y no escribibles por el grupo ni por otros. Si no, abortar.
+- **Hecho:** siendo root, antes de cargarlos, `bin/guardian` comprueba que `/usr/local`, `/usr/local/libexec`, `…/efficiency-guardian`, `…/lib` y cada módulo son de root, no son enlaces y no son escribibles por el grupo ni por otros. Si no, aborta. Los módulos se cargan de una lista fija, no con un comodín.
 - El instalador verifica toda la cadena: `/usr/local/libexec`, `…/efficiency-guardian`, `…/lib` y cada archivo.
 
 ## Interfaz
@@ -72,7 +82,10 @@ Dividir el motor en módulos (D13) significa que `guardian`, corriendo como root
 |---|---|---|---|
 | `guardian start` | Sí | Escribe o reemplaza el bloque gestionado con todos los grupos de `blocklists/`. Si ya está igual, no escribe nada. | 0 si quedó activo; ≠0 si hubo error y no se tocó nada |
 | `guardian stop` | Sí | Quita el bloque gestionado. Si no existe, no hace nada. | 0 si quedó inactivo |
-| `guardian status` | No | Imprime `activo (N dominios)` o `inactivo`. | 0 |
+| `guardian status` | No | Imprime `activo (N dominios)` o `inactivo`. | 0; 1 si los marcadores están dañados |
+| Cualquier otra cosa (`guardian rm`, `guardian start 25`…) | — | Muestra el uso. En la Fase 1, `start` no admite argumentos. | 2 |
+
+Los mensajes son en español. `/usr/local/sbin` no está en el `PATH` normal de macOS, así que se usa la ruta completa: `/usr/local/sbin/guardian status`.
 
 ## Formato del bloque en `/etc/hosts`
 
@@ -91,8 +104,10 @@ Dividir el motor en módulos (D13) significa que `guardian`, corriendo como root
 
 ## Algoritmo (`start`; `stop` es igual pero sin bloque nuevo)
 
-1. **Entorno seguro:** `PATH=/usr/bin:/bin:/usr/sbin:/sbin`, `umask 022`, y en zsh `setopt ERR_EXIT NO_UNSET PIPE_FAIL`.
-2. **Comprobar que corre como root.** Excepción solo para pruebas: si **no** es root, aceptar `GUARDIAN_HOSTS_FILE`, `GUARDIAN_BLOCKLIST_DIR` y `GUARDIAN_SKIP_FLUSH=1`. **Si es root, ignorar esas variables.** (sudo ya limpia el entorno, pero esto es una segunda barrera.)
+1. **Entorno seguro:** `#!/bin/zsh -f`, `PATH=/usr/bin:/bin:/usr/sbin:/sbin`, `umask 022`, `LC_ALL=C`, y en zsh `setopt ERR_EXIT NO_UNSET PIPE_FAIL`.
+2. **Comprobar que corre como root.** Excepción solo para pruebas: si **no** es root, aceptar `GUARDIAN_HOSTS_FILE`, `GUARDIAN_BLOCKLIST_DIR`, `GUARDIAN_DATA_DIR` y `GUARDIAN_LIB_DIR`. **Si es root, ignorar esas variables.** (sudo quita esas variables, pero no todo el entorno: conserva `HOME`; ver arriba.)
+   - Sin root nunca se vacía la caché DNS, ni se cambia el dueño de archivos, ni se escribe en el registro: sin root no se puede tocar el `/etc/hosts` real. Por eso `GUARDIAN_SKIP_FLUSH` ya no hace falta (2026-10-29).
+   - `start` y `stop` sin root y sin `GUARDIAN_HOSTS_FILE` se niegan con "este comando necesita root: usa sudo".
 3. **Leer las listas:**
    - Ignorar líneas vacías y comentarios (`#`).
    - Pasar a minúsculas y quitar duplicados.
@@ -108,7 +123,15 @@ Dividir el motor en módulos (D13) significa que `guardian`, corriendo como root
    - Escribir, `chmod 644`, `chown root:wheel`.
    - `mv -f` sobre `/etc/hosts`.
 9. **Vaciar la caché DNS:** `dscacheutil -flushcache; killall -HUP mDNSResponder`.
-10. **Registrar:** `logger -t efficiency-guardian "start: N dominios"`. Se ve con `log show --predicate 'process == "logger"' --last 1h`.
+10. **Registrar:** `logger -t efficiency-guardian "efficiency-guardian: start: N dominios"`. El nombre va también dentro del mensaje porque la etiqueta de `-t` no aparece en el texto que filtra `log show` (verificado el 2026-10-29). Se ve con:
+    ```
+    /usr/bin/log show --last 1h --style compact --predicate 'process == "logger" AND eventMessage BEGINSWITH "efficiency-guardian"'
+    ```
+    Ruta completa a propósito: en zsh, `log` a secas es un comando interno (lista inicios de sesión) y falla con "too many arguments".
+
+### Trampa de zsh encontrada al implementar (2026-10-29)
+
+Si una expansión falla **dentro de la condición de un `if`** (por ejemplo `$words[1]` con `NO_UNSET` y el arreglo vacío), zsh muestra el error, da la condición por falsa y **sigue**, incluso con `ERR_EXIT`. En `is_legacy_line` eso hacía que las líneas de comentario de hosts contaran como "antiguas" y el instalador las habría borrado; las pruebas lo detectaron. Regla: no mezclar en la misma condición una comprobación de tamaño y el acceso al elemento (`(( $#a < 2 || ... $a[1] ))`); usar dos `if` separados.
 
 ## Pruebas (`tests/run.zsh`, sin root, sin dependencias)
 
@@ -125,27 +148,35 @@ Cada caso copia `tests/fixtures/hosts` a una carpeta temporal y usa las variable
 9. Un hosts sin salto de línea final se maneja bien.
 10. `status` refleja el estado correcto.
 11. **Siendo root, las variables `GUARDIAN_*` (incluida `GUARDIAN_LIB_DIR`) se ignoran.** No se puede probar sin root: comprobarlo leyendo el código y verificarlo a mano en la instalación.
-12. **Regla de tamaño:** `check-length.zsh` falla con un archivo de 151 líneas y avisa con uno de 101 (probarlo con archivos temporales).
+12. **Regla de tamaño:** `check-length.zsh` falla con un archivo de 150 líneas y avisa con uno de 101 (probarlo con archivos temporales).
+
+**Además (2026-10-29):** la migración de líneas antiguas y la regla de sudoers (`test-install.zsh`, que valida la regla con `visudo -c -f`, que funciona sin root), la sintaxis de todo el código (`test-syntax.zsh`) y que `stop` funcione aunque las listas estén dañadas. Para comprobar que las pruebas detectan errores, se rompió el motor a propósito de 8 formas (sin línea IPv6, sin lista "nunca bloquear", reescribir siempre…) en una copia: todas las rompieron.
 
 ## Instalador (`install.sh`, lo ejecuta el usuario: `sudo ./install.sh`)
 
 1. **Exigir root y un usuario destino:** `$SUDO_USER` no vacío y distinto de root.
-2. **Ejecutar las pruebas como el usuario** (`sudo -u "$SUDO_USER" zsh tests/run.zsh`). Si fallan, abortar.
+2. **Ejecutar las pruebas como el usuario** (`sudo -u "$SUDO_USER" zsh -f tests/run.zsh`). Si fallan, abortar mostrando solo lo que falló.
 3. **Crear carpetas e instalar archivos** con `install -o root -g wheel -m …` (rutas de la tabla de arriba).
-4. **Migrar las líneas manuales antiguas:**
-   - Buscar en `/etc/hosts`, **fuera del bloque**, líneas que bloqueen dominios de nuestras listas. Hoy son 4 líneas de YouTube; ver [entorno.md](../entorno.md).
-   - Mostrarlas y preguntar `¿Quitarlas? [s/N]`.
-   - Si la respuesta es sí: copia de seguridad en `/var/db/efficiency-guardian/hosts.before-install` y quitar **solo** esas líneas, con escritura atómica.
+   - Las carpetas compartidas (`/usr/local/sbin`, `/usr/local/libexec`, `/usr/local/etc`) se crean si faltan, pero **si ya existen no se tocan**: `install -d` cambiaría su dueño y permisos, y podrían ser de otro programa (por ejemplo Homebrew en un Mac Intel). El paso 4 comprueba que sean seguras.
+   - Antes de copiar se borran los módulos y listas de una instalación anterior, para que un grupo eliminado del repositorio deje de bloquearse.
+4. **Verificar** (antes que sudoers, a propósito: la regla solo se instala si lo instalado es seguro) que toda la cadena es de root, no son enlaces y no es escribible por el grupo ni por otros: `/usr/local`, el motor y su carpeta, `/usr/local/libexec/…/lib` y cada módulo, `/usr/local/etc/…/blocklists` y cada lista, y `/var/db/efficiency-guardian`. Si algo falla, **borrar la regla de sudoers** si quedaba de una instalación anterior, y abortar.
+5. **Migrar las líneas manuales antiguas:**
+   - Buscar en `/etc/hosts`, **fuera del bloque**, líneas `IP dominio [dominio…]` con una IP de bloqueo (`0.0.0.0`, `127.0.0.1`, `::`, `::1`) y **todos** los dominios en nuestras listas. Una línea que mezcle otros dominios no se toca. Hoy son 4 líneas de YouTube; ver [entorno.md](../entorno.md).
+   - Mostrarlas y preguntar `¿Quitarlas? [s/N]` (se lee de `/dev/tty`; sin terminal, la respuesta es no).
+   - Si la respuesta es sí: copia de seguridad en `/var/db/efficiency-guardian/hosts.before-install.<fecha-hora>` (con fecha para que una segunda migración no borre la primera copia) y quitar **solo** esas líneas, con escritura atómica.
    - Sin esto, `guardian stop` no desbloquearía YouTube.
-5. **Instalar la regla de sudoers:**
-   - Generar a partir de `$SUDO_USER`: `<usuario> ALL=(root) NOPASSWD: /usr/local/sbin/guardian start, /usr/local/sbin/guardian stop`.
+6. **Instalar la regla de sudoers:**
+   - Generar a partir de `$SUDO_USER` (solo se aceptan nombres `^[a-z_][a-z0-9_.-]*$`): `<usuario> ALL=(root) NOPASSWD: /usr/local/sbin/guardian start, /usr/local/sbin/guardian stop`.
    - Escribir en un temporal y validar con `visudo -c -f temporal`.
    - Instalar con `install -m 440 -o root -g wheel`.
    - Ejecutar `visudo -c`. Si falla, **borrar el archivo** y abortar.
-6. **Verificar** que `/usr/local/sbin`, `/usr/local/sbin/guardian`, `/usr/local/libexec/efficiency-guardian/lib` y cada módulo son de root y no escribibles por el grupo ni por otros.
-7. **Imprimir los siguientes pasos:** la verificación manual de abajo y la Fase 2.
+7. **Imprimir los siguientes pasos:** la verificación manual de abajo y la Fase 2. **El instalador no activa el bloqueo.**
 
-**El desinstalador** ejecuta `guardian stop`, borra la regla de sudoers, el script y la configuración, y **conserva** `/var/db/efficiency-guardian/` (copias de seguridad).
+Se puede volver a ejecutar para actualizar lo instalado (por ejemplo, tras cambiar las listas).
+
+**El desinstalador** ejecuta `guardian stop`, borra la regla de sudoers, el motor, sus módulos y las listas, y **conserva** `/var/db/efficiency-guardian/` (copias de seguridad). Si no puede quitar el bloque de hosts, no desinstala nada: sin el motor, habría que quitarlo a mano.
+
+**Ensayo sin root (2026-10-29):** el instalador, el motor instalado y el desinstalador se ejecutaron enteros sobre una copia del repositorio con las rutas apuntando a una carpeta temporal, y con `chown`, `sudo`, `visudo` e `install` simulados. Funcionó todo: pruebas, copia, verificación, migración de las 4 líneas con su copia, regla de sudoers (`440`), `start`/`status`/`stop`, reinstalación sin cambios y desinstalación conservando las copias. También se comprobó que el motor se niega a cargar un módulo escribible por el grupo y que el instalador quita la regla de sudoers si una carpeta es escribible por todos. **Lo que no se pudo ensayar:** `chown` real, `visudo -c` sobre el sudoers completo, `dscacheutil`/`killall` y la regla de sudoers en uso. Eso se comprueba en 1.5 y 1.6.
 
 ## Verificación manual tras instalar (la hace el usuario)
 
@@ -158,5 +189,7 @@ Cada caso copia `tests/fixtures/hosts` a una carpeta temporal y usa las variable
 - [ ] No cargan: cada grupo de `blocklists/`, incluido WhatsApp Web. Para Pinterest, anotar a qué subdominio de país redirige.
 - [ ] `sudo -n /usr/local/sbin/guardian stop` y YouTube vuelve a cargar (quizá haga falta recargar).
 - [ ] `/etc/hosts` queda idéntico a como estaba antes de `start`.
+- [ ] El registro muestra el `start` y el `stop`: `/usr/bin/log show --last 1h --style compact --predicate 'process == "logger" AND eventMessage BEGINSWITH "efficiency-guardian"'`.
+- [ ] (Opcional) `sudo printenv HOME` muestra `/Users/<usuario>` y no `/var/root`: confirma que sudo conserva `HOME` y por qué hace falta el `-f`.
 
 Anota los resultados en la bitácora de [PLAN.md](../../PLAN.md). Si algo de la investigación resultó falso, corrígelo en `docs/investigacion/`.

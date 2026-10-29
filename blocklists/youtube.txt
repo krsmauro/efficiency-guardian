@@ -1,0 +1,19 @@
+# Grupo: youtube
+# Fuente: docs/investigacion/04-dominios.md (2026-10-28).
+# Un dominio por línea. /etc/hosts no admite comodines: cada subdominio va aparte.
+# El motor añade por su cuenta la línea IPv4 (0.0.0.0) y la IPv6 (::) de cada dominio.
+# NO añadir: accounts.youtube.com (inicio de sesión de Google), studio.youtube.com y
+# upload.youtube.com (YouTube Studio, D6b), youtube.googleapis.com (videos en Drive).
+# El motor se niega a bloquearlos aunque aparezcan aquí.
+
+youtube.com
+www.youtube.com
+m.youtube.com
+music.youtube.com
+tv.youtube.com
+youtu.be
+youtube-nocookie.com
+www.youtube-nocookie.com
+youtubekids.com
+www.youtubekids.com
+youtubei.googleapis.com

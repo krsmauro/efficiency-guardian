@@ -20,9 +20,9 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 
 ## Estado actual
 
-- **Fase:** planificación terminada, con todas las decisiones tomadas salvo tres supuestos por confirmar (S1, S2 y S3, en D10). No bloquean la Fase 1.
-- **Siguiente paso:** un agente implementa la [Fase 1](docs/fases/fase-1-motor.md).
-- **Código escrito:** ninguno. `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
+- **Fase:** 1, código terminado (pasos 1.1 a 1.4). Faltan los pasos del usuario: 1.5 (instalar) y 1.6 (verificación manual). Siguen pendientes los supuestos S1, S2 y S3 (D10); no bloquean la Fase 1.
+- **Siguiente paso: el usuario** revisa los scripts y ejecuta `sudo ./install.sh` (paso 1.5), y luego la verificación manual de la [Fase 1](docs/fases/fase-1-motor.md#verificación-manual-tras-instalar-la-hace-el-usuario) (1.6). Después, la Fase 2.
+- **Código escrito:** motor `bin/guardian` + 8 módulos en `lib/`, 10 listas en `blocklists/` (82 dominios), instalador y desinstalador, y 224 comprobaciones en `tests/` (`zsh tests/run.zsh`, todas pasan). **Nada instalado todavía:** `/etc/hosts` sigue con las 4 líneas manuales de YouTube.
 - **Última actualización:** 2026-10-29.
 
 ## Cómo usar este plan (agentes)
@@ -84,10 +84,10 @@ Un "modo enfoque" para el MacBook Pro que bloquea en **todos los navegadores** l
 | 6 | Investigar y pulir la experiencia de usuario | ⏳ se escribe al llegar |
 
 ### Fase 1: motor de bloqueo
-- [ ] 1.1 Crear `blocklists/*.txt` a partir de [04-dominios.md](docs/investigacion/04-dominios.md): los 10 grupos de D6.
-- [ ] 1.2 Escribir las pruebas primero: una por módulo en `tests/`, el fixture y `check-length.zsh` (D13).
-- [ ] 1.3 Escribir `bin/guardian` y los módulos de `lib/` hasta que pasen las pruebas.
-- [ ] 1.4 Escribir `install.sh` (con sus pasos en `install/`) y `uninstall.sh`.
+- [x] 1.1 Crear `blocklists/*.txt` a partir de [04-dominios.md](docs/investigacion/04-dominios.md): los 10 grupos de D6.
+- [x] 1.2 Escribir las pruebas primero: una por módulo en `tests/`, el fixture y `check-length.zsh` (D13).
+- [x] 1.3 Escribir `bin/guardian` y los módulos de `lib/` hasta que pasen las pruebas.
+- [x] 1.4 Escribir `install.sh` (con sus pasos en `install/`) y `uninstall.sh`.
 - [ ] 1.5 **Usuario:** revisar los scripts y ejecutar `sudo ./install.sh`.
 - [ ] 1.6 **Usuario:** verificación manual (checklist en la especificación, incluidos YouTube Studio, WhatsApp Web y Pinterest).
 
@@ -184,3 +184,20 @@ Investigar referencias, definir qué es una experiencia "asombrosa" para el usua
   - La carga desde una ruta fija ya cubre la diferencia.
   - El motor crecerá a unas 500–600 líneas con la Fase 4 (estimación), justo donde más importa poder depurar a mano.
   - No reabrir sin un motivo nuevo.
+
+### 2026-10-29 · Sesión 2: Fase 1, pasos 1.1 a 1.4
+- **Hecho:**
+  - 10 listas (82 dominios), pruebas primero, motor en 9 archivos, instalador en 6 y desinstalador. El archivo de código más largo tiene 89 líneas.
+  - 224 comprobaciones sin root. Para saber si detectan errores, se rompió el motor a propósito de 8 formas en una copia: todas fallaron.
+  - **Ensayo completo sin root** del instalador, el motor instalado y el desinstalador, sobre una carpeta temporal con `chown`/`sudo`/`visudo` simulados. Funcionó, y las barreras de seguridad saltaron cuando debían. Lo que no se pudo ensayar se comprueba en 1.5 y 1.6 (detalle en la [especificación](docs/fases/fase-1-motor.md#instalador-installsh-lo-ejecuta-el-usuario-sudo-installsh)).
+- **Hallazgos:**
+  - **sudo en macOS conserva `HOME`**, así que un script zsh de root leería el `~/.zshenv` del usuario. Solución: primera línea `#!/bin/zsh -f`. Corregido en [02](docs/investigacion/02-integracion-macos.md) y en la especificación, que decía "sudo ya limpia el entorno".
+  - **Trampa de zsh:** un error de expansión dentro de la condición de un `if` se trata como "falso" y la ejecución sigue, incluso con `ERR_EXIT`. Por eso el instalador habría borrado los comentarios de `/etc/hosts`; las pruebas lo detectaron antes de instalar nada.
+  - **El comando para leer el registro estaba mal** en las especificaciones: en zsh `log` es un comando interno, y la etiqueta de `logger -t` no aparece en el mensaje. Corregido en las Fases 1 y 4 y en [entorno.md](docs/entorno.md).
+- **Cambios respecto a la especificación** (todos anotados en ella):
+  - La regla de tamaño falla desde 150 líneas (antes "más de 150"), como dice D13.
+  - El instalador verifica los permisos **antes** de instalar la regla de sudoers, y la quita si algo es inseguro.
+  - `GUARDIAN_DATA_DIR` sustituye a `GUARDIAN_SKIP_FLUSH`: sin root nunca se vacía la caché.
+  - La copia previa a la migración lleva fecha (`hosts.before-install.<fecha-hora>`).
+  - `status` sale con 1 si los marcadores están dañados; el uso incorrecto sale con 2.
+- **Para la Fase 4:** el estado necesitará un candado (`lockf`/`shlock`) porque el LaunchDaemon y un atajo pueden escribir a la vez. Anotado en su especificación.
